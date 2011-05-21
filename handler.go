@@ -7,6 +7,7 @@ import (
 	"json"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -98,26 +99,21 @@ func handleHome(conn http.ResponseWriter, req *http.Request) {
 		conn.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	}
-	data := `<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja">
-  <body>
-    <p>Hello, World!</p>
-  </body>
-</html>`
+	data, err := GetFileFromCache("views/home.html")
+	if err != nil {
+		log.Print(err)
+		conn.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	// TODO: gzip
 	conn.Header().Set("Content-Type", "application/xhtml+xml; charset=utf-8")
-	if _, err := io.WriteString(conn, data); err != nil {
+	if _, err := conn.Write(data); err != nil {
 		log.Print("io.WriteString: ", err)
 	}
 }
 
 func isGettablePath(path string) bool {
-	var pathRegExp = regexp.MustCompile("^/games(/[a-zA-Z0-9_\\-]+(/(maps|planes|items)(/[a-zA-Z0-9_\\-]+)?)?)?$")
-	if pathRegExp.MatchString(path) {
-		return true
-	}
-	return false
+	return true
 }
 
 func isPostablePath(path string) bool {
@@ -238,12 +234,32 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			sendResponseMethodNotAllowed(conn, req)
 			return
 		}
-		data, ok := r.Storage.Get(path)
-		if !ok {
-			http.NotFound(conn, req)
+		contentType := ""
+		data, err := GetFileFromCache(filepath.Join("public", path))
+		switch err {
+		case nil:
+			switch {
+			case strings.HasSuffix(path, ".js"):
+				contentType = "text/javascript; charset=utf-8"
+			case strings.HasSuffix(path, ".css"):
+				contentType = "text/css; charset=utf-8"
+			default:
+				contentType = "application/octet-stream"
+			}
+		case os.ENOENT:
+			data2, ok := r.Storage.Get(path)
+			if !ok {
+				http.NotFound(conn, req)
+				return
+			}
+			data = data2
+			contentType = "application/json; charset=utf-8"
+		default:
+			log.Print(err)
+			conn.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		conn.Header().Set("Content-Type", "application/json; charset=utf-8")
+		conn.Header().Set("Content-Type", contentType)
 		conn.WriteHeader(http.StatusOK)
 		if httpMethod == httpMethodHead {
 			return
@@ -260,7 +276,8 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			conn.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		newURL := req.URL.Scheme + "://" + req.URL.RawAuthority + newPath
+		// TODO: fix it!
+		newURL := "http://" + req.Host + newPath
 		conn.Header().Set("Location", newURL)
 		conn.WriteHeader(http.StatusCreated)
 	case httpMethodPut:
@@ -299,12 +316,16 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 	}
 }
 
+var (
+	storage = &DummyStorage{}
+)
+
 func Handler(conn http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == "/":
 		handleHome(conn, req)
 	default:
-		resourceHandler := &ResourceHandler{&DummyStorage{}}
+		resourceHandler := &ResourceHandler{storage}
 		resourceHandler.Handle(conn, req)
 	}
 }

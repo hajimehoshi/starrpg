@@ -65,37 +65,6 @@ func TestCheckAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestIsGettablePath(t *testing.T) {
-	type TestCase struct {
-		path string
-		expectedResult bool
-	}
-	testCases := []TestCase{
-		{"/games", true},
-		{"/games/1", true},
-		{"/games/1/maps", true},
-		{"/games/1/maps/2", true},
-		{"/games/", false},
-		{"/games/1/", false},
-		{"/games/1/maps/", false},
-		{"/games/1/maps/2/", false},
-		{"/foos/", false},
-		{"/foos/1", false},
-		{"/games/1/foos", false},
-		{"/games/1/foos/2", false},
-		{"", false},
-		{"games", false},
-	}
-	for _, testCase := range testCases {
-		if actual := isGettablePath(testCase.path); actual != testCase.expectedResult {
-			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
-			testCase.path,
-			testCase.expectedResult,
-			actual)
-		}
-	}
-}
-
 func TestIsPostablePath(t *testing.T) {
 	type TestCase struct {
 		path string

@@ -2,6 +2,7 @@ include $(GOROOT)/src/Make.inc
 
 TARG:=starrpg
 GOFILES:=\
+	file_cache.go \
 	file_storage.go \
 	handler.go \
 
