@@ -17,15 +17,15 @@
     -webkit-box-sizing: border-box;
 }
 
-.editPanel {
+.editPanel.hasEntries {
     display: -moz-box;
     display: -webkit-box;
 }
-.editPanel > section:nth-child(1) {
+.editPanel.hasEntries > *:nth-child(1) {
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
 }
-.editPanel > section:nth-child(2) {
+.editPanel.hasEntries > *:nth-child(2) {
     -moz-box-flex: 1;
     -webkit-box-flex: 1;
     -moz-box-sizing: border-box;
@@ -50,21 +50,8 @@
     margin: 0;
     padding: 0 8px 0 0;
 }
-#edit > section {
-    margin: 0;
-    padding: 0;
-}
 
-.editPanel {
-    margin: 0;
-    padding: 0;
-}
-.editPanel > section:nth-child(1) {
-    margin: 0;
-    padding: 0;
+.editPanel.hasEntries > *:nth-child(1) {
+    overflow-y: scroll;
     width: 15%;
-}
-.editPanel > section:nth-child(2) {
-    margin: 0;
-    padding: 0;
 }
