@@ -7,6 +7,7 @@ function initMainPanel($) {
         return false;
     }
     $('.mainPanelNavItem').click(switchMainPanel);
+    $('.mainPanelNavItem.default').click();
 }
 function initEditPanel($) {
     var editPanels = $('.editPanel');
@@ -17,6 +18,7 @@ function initEditPanel($) {
         return false;
     }
     $('.editPanelNavItem').click(switchEditPanel);
+    $('.editPanelNavItem.default').click();
 }
 jQuery(initMainPanel);
 jQuery(initEditPanel);

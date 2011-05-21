@@ -16,4 +16,4 @@ function init($) {
     }
     $("#createGame").click(createGame);
 }
-$(init);
+jQuery(init);
