@@ -2,18 +2,67 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja">
   <head>
+    <link rel="stylesheet" href="/css/common.css" media="screen" type="text/css" />
+    <link rel="stylesheet" href="/css/game.css" media="screen" type="text/css" />
     <title>Star RPG (仮)</title>
   </head>
   <body>
-    <h1>Star RPG (仮)</h1>
-    <p>ゲーム</p>
-    <nav>
-      <ul>
-        <li>遊ぶ</li>
-        <li>編集する</li>
-        <li>ログ</li>
-      </ul>
-    </nav>
+    <header>
+      <h1>Star RPG (仮)</h1>
+      <nav>
+        <ul>
+          <li id="editNavItem" class="mainPanelNavItem">編集する</li>
+          <li id="playNavItem" class="mainPanelNavItem">遊ぶ</li>
+          <li id="logsNavItem" class="mainPanelNavItem">ログ</li>
+        </ul>
+      </nav>
+    </header>
+    <section id="edit" class="mainPanel default">
+      <nav>
+        <ul>
+          <li id="editGameNavItem" class="editPanelNavItem">ゲーム</li>
+          <li id="editMapsNavItem" class="editPanelNavItem">マップ</li>
+          <li id="editActorsNavItem" class="editPanelNavItem">主人公</li>
+          <li id="editItemsNavItem" class="editPanelNavItem">アイテム</li>
+          <li id="editSkillsNavItem" class="editPanelNavItem">特殊技能</li>
+          <li id="editEnemiesNavItem" class="editPanelNavItem">敵</li>
+        </ul>
+      </nav>
+      <section>
+        <section id="editGame" class="editPanel default">
+          <dl>
+            <dt>タイトル</dt>
+            <dd><input type="text" name="title" value="" /></dd>
+          </dl>
+        </section>
+        <section id="editMaps" class="editPanel">
+          <p>maps</p>
+        </section>
+        <section id="editActors" class="editPanel">
+          <p>actors</p>
+        </section>
+        <section id="editItems" class="editPanel">
+          <p>items</p>
+        </section>
+        <section id="editSkills" class="editPanel">
+          <p>skills</p>
+        </section>
+        <section id="editEnemies" class="editPanel">
+          <p>enemies</p>
+        </section>
+      </section>
+    </section>
+    <section id="play" class="mainPanel">
+      <p>(プレイ画面をここに作る)</p>
+      <p>(スイッチ、変数表)</p>
+    </section>
+    <section id="logs" class="mainPanel">
+      <p>(通信ログをここに書いてデバッグ活用したいけどどうしたものかな)</p>
+    </section>
+    <footer>
+      <p>ステータスバー表示?</p>
+      <p>Hajime Hoshi</p>
+    </footer>
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
     <script type="text/javascript" src="/js/game.js"></script>
   </body>

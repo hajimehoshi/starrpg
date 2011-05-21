@@ -1,0 +1,41 @@
+/* init */
+.mainPanel:not(.default) {
+    display: none;
+}
+.editPanel:not(.default) {
+    display: none;
+}
+
+#edit {
+    display: -moz-box;
+    display: -webkit-box;
+    -moz-box-orient: block-axis;
+    -webkit-box-orient: block-axis;
+}
+
+#edit > nav {
+    background-color: #eee;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    margin: 0;
+    padding: 8px 16px;
+    overflow: hidden;
+}
+#edit > nav ul {
+    margin: 0;
+    padding: 0;
+}
+#edit > nav ul li {
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0 8px 0 0;
+}
+#edit > section {
+    -moz-box-flex: 1;
+    -webkit-box-flex: 1;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    margin: 0;
+    padding: 8px 16px;
+}
