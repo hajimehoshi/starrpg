@@ -189,6 +189,10 @@ func TestDoPost(t *testing.T) {
 	if name != "" {
 		t.Errorf(`name is not "" but %#v`,  name)
 	}
+	newItemBytes := (*storage)["/foos/1"]
+	if string(newItemBytes) != "{}" {
+		t.Errorf(`newItemBytes is not %#v but %#v`, "{}", newItemBytes)
+	}
 }
 
 /*func TestJson(t *testing.T) {

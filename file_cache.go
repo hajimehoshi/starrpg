@@ -41,30 +41,33 @@ func (c *fileCache) deleteEntry(path string) {
 	c.entries[path] = nil, false
 }
 
-func GetFileFromCache(filepath string) ([]byte, os.Error) {
+func GetFileFromCache(filepath string) ([]byte, bool, os.Error) {
 	fileinfo, err := os.Stat(filepath)
 	if err != nil {
 		fileCache_.deleteEntry(filepath)
-		return nil, err
+		if e, ok := err.(*os.PathError); ok && e.Error == os.ENOENT {
+			return nil, false, nil
+		}
+		return nil, false, err
 	}
 	if !fileinfo.IsRegular() {
 		fileCache_.deleteEntry(filepath)
-		return nil, os.ENOENT
+		return nil, false, nil
 	}
 	ent, hit := fileCache_.getEntry(filepath)
 	if !hit || fileinfo.Mtime_ns != ent.mtime_ns {
 		fileCache_.deleteEntry(filepath)
 		file, err := os.OpenFile(filepath, os.O_RDONLY, 0777)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		defer file.Close()
 		content, err := ioutil.ReadAll(file)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		ent = &fileCacheEntry{content, fileinfo.Mtime_ns}
 		fileCache_.insertEntry(filepath, ent)
 	}
-	return ent.content, nil
+	return ent.content, true, nil
 }
