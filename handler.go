@@ -244,6 +244,8 @@ func doGet(storage Storage, path string, acceptHeader string) (contentType strin
 			contentType = "text/javascript; charset=utf-8"
 		case strings.HasSuffix(path, ".css"):
 			contentType = "text/css; charset=utf-8"
+		case path == "/favicon.ico":
+			contentType = "image/png"
 		default:
 			contentType = "application/octet-stream"
 		}
