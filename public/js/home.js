@@ -3,9 +3,9 @@ function init($) {
         var args = {
             url: "/games",
             type: "POST",
-            success: function(data, status, jqxhr) {
-                if (jqxhr.status === 201) {
-                    location.replace(jqxhr.getResponseHeader("Location"));
+            success: function(data, status, jqXHR) {
+                if (jqXHR.status === 201) {
+                    location.replace(jqXHR.getResponseHeader("Location"));
                 } else {
                     // unexpected                             
                 }

@@ -3,7 +3,6 @@ package starrpg
 import (
 	"fmt"
 	"http"
-	"io"
 	"json"
 	"log"
 	"os"
@@ -368,13 +367,13 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			conn.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
-		buf := make([]byte, 4096)
-		size, err := io.ReadFull(req.Body, buf)
-		if err == nil {
+		buf := make([]byte, 4097)
+		size, err := req.Body.Read(buf)
+		if 4096 < size {
 			conn.WriteHeader(http.StatusRequestEntityTooLarge)
 			return
 		}
-		if err != os.EOF {
+		if err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusInternalServerError)
 			return
