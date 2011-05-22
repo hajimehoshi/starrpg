@@ -20,5 +20,11 @@ function initEditPanel($) {
     $('.editPanelNavItem').click(switchEditPanel);
     $('.editPanelNavItem.default').click();
 }
+function finishInit($) {
+    // TODO: 色々と待つ処理
+    // setTimeout はダミー的処理
+    setTimeout(function () {$('#loading').hide(); }, 100);
+}
 jQuery(initMainPanel);
 jQuery(initEditPanel);
+jQuery(finishInit);
