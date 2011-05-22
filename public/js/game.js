@@ -53,7 +53,7 @@ function init($) {
                  $.ajax(args);
              }
          }
-         function createModelFunc(path) {
+         function createModelFunc(server, path) {
              var cacheStr = '{}';
              var cacheJSON = {};
              var func = function (data) {
@@ -69,20 +69,28 @@ function init($) {
                  server.put(path, data);
                  func.changed();
              }
-             var changedFunc = null;
+             server.get(path, function (data) {
+                            cacheStr = JSON.stringify(data);
+                            cacheJSON = data;
+                            func.changed();
+                        });
+             var changedFuncs = [];
              func.changed = function () {
                  if (arguments.length === 0) {
-                     if (changedFunc instanceof Function) {
-                         changedFunc(cacheJSON);
+                     for (var i = 0; i < changedFuncs.length; i++) {
+                         var func = changedFuncs[i];
+                         if (func instanceof Function) {
+                             func(cacheJSON);
+                         }
                      }
                  } else {
-                     changedFunc = arguments[0];                         
+                     changedFuncs.push(arguments[0]);
                  }
              }
              return func;
          }
          var model = {
-             game: createModelFunc(location.pathname),
+             game: createModelFunc(server, location.pathname),
          };
          function createViewFunc(jqDom) {
              var cache = jqDom.val();
@@ -95,14 +103,17 @@ function init($) {
                  jqDom.val(value);
                  func.changed();
              }
-             var changedFunc = null;
+             var changedFuncs = [];
              func.changed = function () {
                  if (arguments.length === 0) {
-                     if (changedFunc instanceof Function) {
-                         changedFunc(cache);
+                     for (var i = 0; i < changedFuncs.length; i++) {
+                         var func = changedFuncs[i];
+                         if (func instanceof Function) {
+                             func(cache);
+                         }
                      }
                  } else {
-                     changedFunc = arguments[0];                         
+                     changedFuncs.push(arguments[0]);
                  }
              }
              return func;
@@ -131,10 +142,6 @@ function init($) {
              }
          }
          setInterval(reportToPresenter, 1000);
-
-         server.get(location.pathname, function (data) {
-                        model.game(data);
-                    })
      })();
     // TODO: 色々と待つ処理
     $('#loading').hide();
