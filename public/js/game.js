@@ -1,3 +1,9 @@
+// JSON Object must be copied on write!
+
+function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+
 function createServer() {
     return {
         get: function (path, callback) {
@@ -7,7 +13,7 @@ function createServer() {
                 type: "GET",
                 success: function (data, status, jqXHR) {
                     if (jqXHR.status == 200) {
-                        callback(data);                             
+                        callback(data);
                     } else {
                         // unexpected!
                     }
@@ -16,7 +22,8 @@ function createServer() {
             $.ajax(args);
         },
         put: function (path, data) {
-            // TODO: 即座に送るのではなく、ある程度キャッシュするように修正
+            // TODO: 即座に送るのではなく、ある程度キャッシュして最適化の後、
+            // 送信するように修正
             var args = {
                 url: path,
                 data: JSON.stringify(data),
@@ -47,51 +54,44 @@ function createEvent() {
 }
 
 function createModel(server, path) {
-    var cacheStr = '{}';
-    var cacheJSON = {};
+    var cache = {};
     var updated = createEvent();
     server.get(path, function (data) {
-                   cacheStr = JSON.stringify(data);
-                   cacheJSON = data;
-                   updated.fire(cacheJSON);
+                   cache = data;
+                   updated.fire(cache);
                });
     return {
-        get: function() {
-            return cacheJSON;
+        get: function(key) {
+            return cache[key];
         },
-        update: function (data) {
-            var dataStr = JSON.stringify(data);
-            if (cacheStr === dataStr) {
+        update: function (key, value) {
+            if (cache[key] === value) {
                 return;
             }
-            cache = dataStr;
-            cacheJSON = data;
-            server.put(path, data);
-            updated.fire(cacheJSON);
+            cache = clone(cache);
+            cache[key] = value;
+            server.put(path, cache);
+            updated.fire(cache);
         },
         register: updated.register,
     }
 }
 
 function createView(jqDom) {
-    var cache = jqDom.val();
     var updated = createEvent();
     jqDom.change(function () {
-                     cache = jqDom.val();
-                     updated.fire(cache);
+                     updated.fire(jqDom.val());
                  });
     return {
         get: function () {
-            return cache;
+            return jqDom.val();
         },
-        update: function () {
-            var value = (0 < arguments.length) ? arguments[0] : jqDom.val();
-            if (cache === value) {
+        update: function (value) {
+            if (jqDom.val() === value) {
                 return;
             }
-            cache = value;
             jqDom.val(value);
-            updated.fire(cache);
+            updated.fire(jqDom.val());
         },
         register: updated.register,
     }
@@ -110,7 +110,7 @@ function init($) {
          $('.mainPanelNavItem.default').click();
      })();
     var activeEditPanel = null;
-    (function() {
+    (function () {
          var editPanels = $('.editPanel');
          function switchEditPanel() {
              // calll check function?
@@ -123,24 +123,27 @@ function init($) {
          $('.editPanelNavItem').click(switchEditPanel);
          $('.editPanelNavItem.default').click();
      })();
-    (function() {
+    (function () {
          var server = createServer();
-         var model = {
-             game: createModel(server, location.pathname),
-         };
+         var game = createModel(server, location.pathname);
          var editGamePresenter = {
-             nameTextBox: createView($('#gameNameTextBox')),
+             nameView: createView($('#editGame *[name=name]')),
+             descriptionView: createView($('#editGame *[name=description]')),
          };
-         var game = {
-             name: '',
-         };
-         editGamePresenter.nameTextBox.register(function (name) {
-                                                    game.name = name;
-                                                    model.game.update(game);
-                                                });
-         model.game.register(function (game) {
-                                 editGamePresenter.nameTextBox.update(game.name);
-                             });
+         (function (){
+              var p = editGamePresenter
+              p.nameView.register(function (name) {
+                                      game.update('name', name);
+                                  });
+              p.descriptionView.register(function (description) {
+                                             game.update('description', description);
+                                         });
+              game.register(function (game) {
+                                var p = editGamePresenter;
+                                p.nameView.update(game.name);
+                                p.descriptionView.update(game.description);
+                            });
+         })();
          var editItemsPresenter = {
 
          };
