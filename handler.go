@@ -363,7 +363,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			sendResponseMethodNotAllowed(conn, req)
 			return
 		}
-		if checkAcceptHeader("application/json", req.Header.Get("Accept")) <= 0 {
+		if !regexp.MustCompile("^application/json;?").MatchString(req.Header.Get("Content-Type")) {
 			conn.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
