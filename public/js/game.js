@@ -29,9 +29,27 @@ function createServer() {
     };
 }
 
+function createEvent() {
+    var registeredFuncs = [];
+    return {
+        fire: function () {
+            for (var i = 0; i < registeredFuncs.length; i++) {
+                var func = registeredFuncs[i];
+                if (func instanceof Function) {
+                    func.apply(null, arguments);
+                }
+            }
+        },
+        register: function () {
+            registeredFuncs.push(arguments[0]);
+        }
+    }
+}
+
 function createModelFunc(server, path) {
     var cacheStr = '{}';
     var cacheJSON = {};
+    var changed = createEvent();
     var func = function (data) {
         if (arguments.length === 0) {
             return cacheJSON;
@@ -43,31 +61,19 @@ function createModelFunc(server, path) {
         cache = dataStr;
         cacheJSON = data;
         server.put(path, data);
-        func.changed();
+        changed.fire(cacheJSON);
     };
     server.get(path, function (data) {
                    cacheStr = JSON.stringify(data);
                    cacheJSON = data;
-                   func.changed();
+                   changed.fire(cacheJSON);
                });
-    var changedFuncs = [];
-    func.changed = function () {
-        if (arguments.length === 0) {
-            for (var i = 0; i < changedFuncs.length; i++) {
-                var func = changedFuncs[i];
-                if (func instanceof Function) {
-                    func(cacheJSON);
-                }
-            }
-        } else {
-            changedFuncs.push(arguments[0]);
-        }
-    };
-    return func;
+    return [func, changed.register];
 }
 
 function createViewFunc(jqDom) {
     var cache = jqDom.val();
+    var changed = createEvent();
     var func = function () {
         var value = (0 < arguments.length) ? arguments[0] : jqDom.val();
         if (cache === value) {
@@ -75,28 +81,14 @@ function createViewFunc(jqDom) {
         }
         cache = value;
         jqDom.val(value);
-        func.changed();
+        changed.fire(cache);
     }
     jqDom.change(function () {
                      cache = jqDom.val();
-                     func.changed();
+                     changed.fire(cache);
                  });
-    var changedFuncs = [];
-    func.changed = function () {
-        if (arguments.length === 0) {
-            for (var i = 0; i < changedFuncs.length; i++) {
-                var func = changedFuncs[i];
-                if (func instanceof Function) {
-                    func(cache);
-                }
-            }
-        } else {
-            changedFuncs.push(arguments[0]);
-        }
-    }
-    return func;
+    return [func, changed.register];
 }
-         
 
 function init($) {
     (function () {
@@ -126,22 +118,26 @@ function init($) {
      })();
     (function() {
          var server = createServer();
+         var funcs = createModelFunc(server, location.pathname);
          var model = {
-             game: createModelFunc(server, location.pathname),
+             game: funcs[0],
+             gameChangedReg: funcs[1],
          };
+         var funcs = createViewFunc($('#gameNameTextBox'));
          var editGamePresenter = {
-             nameTextBox: createViewFunc($('#gameNameTextBox')),
+             nameTextBox: funcs[0],
+             nameTextBoxChangedReg: funcs[1],
          };
          var game = {
              name: '',
          };
-         editGamePresenter.nameTextBox.changed(function (name) {
-                                                   game.name = name;
-                                                   model.game(game);
-                                               });
-         model.game.changed(function (game) {
-                                editGamePresenter.nameTextBox(game.name);
-                            });
+         editGamePresenter.nameTextBoxChangedReg(function (name) {
+                                                     game.name = name;
+                                                     model.game(game);
+                                                 });
+         model.gameChangedReg(function (game) {
+                                  editGamePresenter.nameTextBox(game.name);
+                              });
          var editItemsPresenter = {
 
          };
