@@ -367,15 +367,16 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			conn.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
-		buf := make([]byte, 4097)
+		buf := make([]byte, 4096)
 		size, err := req.Body.Read(buf)
-		if 4096 < size {
-			conn.WriteHeader(http.StatusRequestEntityTooLarge)
-			return
-		}
 		if err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = req.Body.Read(make([]byte, 1))
+		if err != os.EOF {
+			conn.WriteHeader(http.StatusRequestEntityTooLarge)
 			return
 		}
 		body := buf[:size]
