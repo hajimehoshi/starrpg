@@ -46,48 +46,55 @@ function createEvent() {
     }
 }
 
-function createModelFunc(server, path) {
+function createModel(server, path) {
     var cacheStr = '{}';
     var cacheJSON = {};
-    var changed = createEvent();
-    var func = function (data) {
-        if (arguments.length === 0) {
-            return cacheJSON;
-        }
-        var dataStr = JSON.stringify(data);
-        if (cacheStr === dataStr) {
-            return
-        }
-        cache = dataStr;
-        cacheJSON = data;
-        server.put(path, data);
-        changed.fire(cacheJSON);
-    };
+    var updated = createEvent();
     server.get(path, function (data) {
                    cacheStr = JSON.stringify(data);
                    cacheJSON = data;
-                   changed.fire(cacheJSON);
+                   updated.fire(cacheJSON);
                });
-    return [func, changed.register];
+    return {
+        get: function() {
+            return cacheJSON;
+        },
+        update: function (data) {
+            var dataStr = JSON.stringify(data);
+            if (cacheStr === dataStr) {
+                return;
+            }
+            cache = dataStr;
+            cacheJSON = data;
+            server.put(path, data);
+            updated.fire(cacheJSON);
+        },
+        register: updated.register,
+    }
 }
 
-function createViewFunc(jqDom) {
+function createView(jqDom) {
     var cache = jqDom.val();
-    var changed = createEvent();
-    var func = function () {
-        var value = (0 < arguments.length) ? arguments[0] : jqDom.val();
-        if (cache === value) {
-            return value;
-        }
-        cache = value;
-        jqDom.val(value);
-        changed.fire(cache);
-    }
+    var updated = createEvent();
     jqDom.change(function () {
                      cache = jqDom.val();
-                     changed.fire(cache);
+                     updated.fire(cache);
                  });
-    return [func, changed.register];
+    return {
+        get: function () {
+            return cache;
+        },
+        update: function () {
+            var value = (0 < arguments.length) ? arguments[0] : jqDom.val();
+            if (cache === value) {
+                return;
+            }
+            cache = value;
+            jqDom.val(value);
+            updated.fire(cache);
+        },
+        register: updated.register,
+    }
 }
 
 function init($) {
@@ -118,26 +125,22 @@ function init($) {
      })();
     (function() {
          var server = createServer();
-         var funcs = createModelFunc(server, location.pathname);
          var model = {
-             game: funcs[0],
-             gameChangedReg: funcs[1],
+             game: createModel(server, location.pathname),
          };
-         var funcs = createViewFunc($('#gameNameTextBox'));
          var editGamePresenter = {
-             nameTextBox: funcs[0],
-             nameTextBoxChangedReg: funcs[1],
+             nameTextBox: createView($('#gameNameTextBox')),
          };
          var game = {
              name: '',
          };
-         editGamePresenter.nameTextBoxChangedReg(function (name) {
-                                                     game.name = name;
-                                                     model.game(game);
-                                                 });
-         model.gameChangedReg(function (game) {
-                                  editGamePresenter.nameTextBox(game.name);
-                              });
+         editGamePresenter.nameTextBox.register(function (name) {
+                                                    game.name = name;
+                                                    model.game.update(game);
+                                                });
+         model.game.register(function (game) {
+                                 editGamePresenter.nameTextBox.update(game.name);
+                             });
          var editItemsPresenter = {
 
          };
