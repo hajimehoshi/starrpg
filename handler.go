@@ -1,4 +1,4 @@
-package starrpg
+package starrpg // TODO: change package name?
 
 import (
 	"fmt"
@@ -374,8 +374,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			conn.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = req.Body.Read(make([]byte, 1))
-		if err != os.EOF {
+		if _, err := req.Body.Read(make([]byte, 1)); err != os.EOF {
 			conn.WriteHeader(http.StatusRequestEntityTooLarge)
 			return
 		}

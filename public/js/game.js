@@ -126,24 +126,20 @@ function init($) {
     (function () {
          var server = createServer();
          var game = createModel(server, location.pathname);
-         var editGamePresenter = {
-             nameView: createView($('#editGame *[name=name]')),
-             descriptionView: createView($('#editGame *[name=description]')),
-         };
          (function (){
-              var p = editGamePresenter
-              p.nameView.register(function (name) {
-                                      game.update('name', name);
-                                  });
-              p.descriptionView.register(function (description) {
-                                             game.update('description', description);
-                                         });
+              var nameView = createView($('#editGame *[name=name]'));
+              var descriptionView = createView($('#editGame *[name=description]'));
+              nameView.register(function (name) {
+                                    game.update('name', name);
+                                });
+              descriptionView.register(function (description) {
+                                           game.update('description', description);
+                                       });
               game.register(function (game) {
-                                var p = editGamePresenter;
-                                p.nameView.update(game.name);
-                                p.descriptionView.update(game.description);
+                                nameView.update(game.name);
+                                descriptionView.update(game.description);
                             });
-         })();
+          })();
          var editItemsPresenter = {
 
          };
