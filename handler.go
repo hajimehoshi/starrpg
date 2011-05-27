@@ -14,6 +14,7 @@ import (
 
 type Storage interface {
 	Get(key string) ([]byte, bool)
+	GetWithPrefix(key string) ([][]byte)
 	Set(key string, value []byte)
 	Delete(key string) bool
 	Inc(key string) (uint64, bool)
@@ -24,6 +25,17 @@ type DummyStorage map[string][]byte
 func (s *DummyStorage) Get(key string) ([]byte, bool) {
 	item, ok := (*s)[key]
 	return item, ok
+}
+
+func (s *DummyStorage) GetWithPrefix(prefix string) [][]byte {
+	values := make([][]byte, 0)
+	for key, value := range *s {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		values = append(values, value)
+	}
+	return values
 }
 
 func (s *DummyStorage) Set(key string, value []byte) {
@@ -51,6 +63,31 @@ func (s *DummyStorage) Inc(key string) (uint64, bool) {
 	(*s)[key] = []byte(strconv.Uitoa64(numValue + 1))
 	return numValue + 1, true
 }
+
+/*type MapStorage struct {
+	storage Storage
+}
+
+func NewMapStorage(storage Storage) *MapStorage {
+	return &MapStorage{storage:storage}
+}
+
+func (s *MapStorage) Get(key string) (map[string]string, bool) {
+	bytes, ok := storage.Get(key)
+	if !ok {
+		return nil, ok
+	}
+	var value map[string]string
+	
+	return value, true
+}
+
+func (s *MapStorage) Set(key string, value map[string]string) {
+}
+
+func (s *MapStorage) Delete(key string) bool {
+	return false
+}*/
 
 func checkAcceptHeader(mediaType, accept string) float64 {
 	splitedMediaType := strings.Split(mediaType, "/", -1)
