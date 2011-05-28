@@ -56,9 +56,11 @@ function createEvent() {
 function createModel(server, path) {
     var cache = {};
     var updated = createEvent();
+    var isLoaded = false;
     server.get(path, function (data) {
                    cache = data;
                    updated.fire(cache);
+                   isLoaded = true;
                });
     return {
         get: function(key) {
@@ -74,6 +76,9 @@ function createModel(server, path) {
             updated.fire(cache);
         },
         register: updated.register,
+        isLoaded: function () {
+            return isLoaded;
+        },
     }
 }
 
@@ -126,7 +131,8 @@ function init($) {
     (function () {
          var server = createServer();
          var game = createModel(server, location.pathname);
-         (function (){
+         var items = createModel(server, location.pathname + '/items');
+         (function () {
               var nameView = createView($('#editGame *[name=name]'));
               var descriptionView = createView($('#editGame *[name=description]'));
               nameView.register(function (name) {
@@ -140,11 +146,15 @@ function init($) {
                                 descriptionView.update(game.description);
                             });
           })();
+         (function () {
+              var entriesView = createView($('#editItems nav'));
+          })();
          var editItemsPresenter = {
-
+             
          };
      })();
     // TODO: 色々と待つ処理
+    
     $('#loading').hide();
 }
 jQuery(init);
