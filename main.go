@@ -3,7 +3,7 @@ package main
 import (
 	"http"
 	"log"
-	"starrpg"
+	"hajimehoshi/starrpg"
 )
 
 func main() {

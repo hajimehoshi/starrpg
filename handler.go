@@ -1,4 +1,4 @@
-package starrpg // TODO: change package name?
+package starrpg
 
 import (
 	"http"
