@@ -1,7 +1,6 @@
 package starrpg // TODO: change package name?
 
 import (
-	"fmt"
 	"http"
 	"json"
 	"log"
@@ -14,48 +13,10 @@ import (
 
 type Storage interface {
 	Get(key string) []byte
-	GetWithPrefix(key string) ([]*StorageEntry)
+	GetWithPrefix(key string) (map[string][]byte)
 	Set(key string, value []byte)
 	Delete(key string) bool
-	Inc(key string) (uint64, bool)
-}
-
-type StorageEntry struct {
-	Key string
-	Value []byte
-}
-
-type MapStorage struct {
-	storage Storage
-}
-
-func NewMapStorage(storage Storage) *MapStorage {
-	return &MapStorage{storage:storage}
-}
-
-func (s *MapStorage) Get(key string) (map[string]string, os.Error) {
-	bytes := s.storage.Get(key)
-	if bytes == nil {
-		return nil, nil
-	}
-	var value map[string]string
-	if err := json.Unmarshal(bytes, value); err != nil {
-		return nil, err
-	}
-	return value, nil
-}
-
-func (s *MapStorage) Set(key string, value map[string]string) os.Error {
-	bytes, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-	s.storage.Set(key, bytes)
-	return nil
-}
-
-func (s *MapStorage) Delete(key string) bool {
-	return s.storage.Delete(key)
+	Update(key string, f func([]byte) ([]byte, os.Error)) os.Error
 }
 
 func checkAcceptHeader(mediaType, accept string) float64 {
@@ -237,7 +198,7 @@ func getHTMLViewPath(path string) string {
 	return ""
 }
 
-func doGet(storage Storage, path string, acceptHeader string) (contentType string, content []byte, err os.Error) {
+func doGet(ms *MapStorage, path string, acceptHeader string) (contentType string, content []byte, err os.Error) {
 	content2, found, err := GetFileFromCache(filepath.Join("public", path))
 	content = content2
 	if err != nil {
@@ -256,14 +217,24 @@ func doGet(storage Storage, path string, acceptHeader string) (contentType strin
 		}
 		return
 	}
-	content2 = storage.Get(path)
-	if content2 == nil {
-		return "", []byte{}, nil
+	obj, err := ms.Get(path)
+	if err != nil {
+		return "", nil, err
 	}
-	content = content2
+	if obj == nil {
+		return "", nil, nil
+	}
+	contents2, err := json.Marshal(obj)
+	if err != nil {
+		return "", nil, err
+	}
+	content = contents2
 	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
 	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
 	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
+	if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
+		return "", nil, nil
+	}
 	if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
 		contentType = "application/json; charset=utf-8"
 		return
@@ -271,47 +242,33 @@ func doGet(storage Storage, path string, acceptHeader string) (contentType strin
 	// TODO: fix path
 	htmlPath := getHTMLViewPath(path)
 	if htmlPath == "" {
-		return "", []byte{}, nil
+		return "", nil, nil
 	}
 	content3, found, err := GetFileFromCache(htmlPath)
 	content = content3
 	if err != nil {
-		return "", []byte{}, err
+		return "", nil, err
 	}
 	if !found {
 		// TODO: 異常事態
-		return "", []byte{}, nil
+		return "", nil, nil
 	}
 	contentType = "application/xhtml+xml; charset=utf-8"
 	return
 }
 
-func doPost(storage Storage, path string) (string, os.Error) {
-	newID, ok := storage.Inc(path + "/*count")
-	if !ok {
-		return "", os.NewError(fmt.Sprintf(`storage.Inc(%#v + "/inner-count") failed!`, path))
-	}
-	values := storage.Get(path)
-	if values == nil {
-		values = []byte("{}")
-	}
-	var items map[string]map[string]string
-	if err := json.Unmarshal(values, &items); err != nil {
+func doPost(ms *MapStorage, path string) (string, os.Error) {
+	newID, err := ms.Inc(path, "count")
+	if err != nil {
 		return "", err
 	}
-	items[strconv.Uitoa64(newID)] = map[string]string{"name": ""}
-	newBytes, err := json.Marshal(items)
-	if err != nil {
-		return "", os.NewError(fmt.Sprintf(`json.Marshal(%#v) failed!`, items))
-	}
-	storage.Set(path, newBytes)
 	newItemPath := path + "/" + strconv.Uitoa64(newID)
-	storage.Set(newItemPath, []byte("{}"))
+	ms.Set(newItemPath, map[string]string{})
 	return newItemPath, nil
 }
 
 type ResourceHandler struct {
-	Storage
+	*MapStorage
 }
 
 func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
@@ -332,12 +289,17 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			sendResponseMethodNotAllowed(conn, req)
 			return
 		}
-		contentType, content, err := doGet(r.Storage, path, req.Header.Get("Accept"))
+		contentType, content, err := doGet(r.MapStorage, path, req.Header.Get("Accept"))
 		if err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		// TODO: returns 406?
+		/*if contentType == "" {
+			conn.WriteHeader(http.StatusNotAcceptable)
+			return
+		}*/
 		if len(content) == 0 {
 			log.Print(path, " not found")
 			sendResponseNotFound(conn, req)
@@ -354,7 +316,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			sendResponseMethodNotAllowed(conn, req)
 			return
 		}
-		newPath, err := doPost(r.Storage, path)
+		newPath, err := doPost(r.MapStorage, path)
 		if err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusInternalServerError)
@@ -385,8 +347,13 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			return
 		}
 		body := buf[:size]
-		// TODO: JSON 形式チェック
-		r.Storage.Set(path, body)
+		obj := map[string]string{}
+		if err := json.Unmarshal(body, obj); err != nil {
+			log.Print(err)
+			conn.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		r.MapStorage.Set(path, obj)
 		conn.WriteHeader(http.StatusOK)
 	case httpMethodDelete:
 		if !isDeletablePath(path) {
@@ -394,7 +361,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// TODO: 子リソースの再帰的削除
-		if !r.Storage.Delete(path) {
+		if !r.MapStorage.Delete(path) {
 			sendResponseNotFound(conn, req)
 			return
 		}
@@ -405,7 +372,8 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 }
 
 var (
-	storage = &DummyStorage{}
+	storage_ = &DummyStorage{}
+	mapStorage_ = NewMapStorage(storage_)
 )
 
 func Handler(conn http.ResponseWriter, req *http.Request) {
@@ -413,7 +381,7 @@ func Handler(conn http.ResponseWriter, req *http.Request) {
 	case path == "/":
 		handleHome(conn, req)
 	default:
-		resourceHandler := &ResourceHandler{storage}
+		resourceHandler := &ResourceHandler{mapStorage_}
 		resourceHandler.Handle(conn, req)
 	}
 }

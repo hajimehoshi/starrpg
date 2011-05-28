@@ -1,8 +1,7 @@
 package starrpg
 
 import (
-	"json"
-	"strconv"
+	//"strconv"
 	"testing"
 )
 
@@ -158,28 +157,26 @@ func TestIsDeletablePath(t *testing.T) {
 	}
 }
 
-func checkMap(actual, expected map[string]string) {
-	
-}
-
 func TestDoPost(t *testing.T) {
 	storage := &DummyStorage{}
-	newPath, err := doPost(storage, "/foos")
+	mapStorage := NewMapStorage(storage)
+	newPath, err := doPost(mapStorage, "/foos")
 	if err != nil {
 		t.Errorf(`doPost(storage, "/foos") failed: %s`, err.String())
 	}
 	if newPath != "/foos/1" {
 		t.Errorf(`newPath is not "/foos/1" but %#v`, newPath)
 	}
-	innerCountBytes := (*storage)["/foos/*count"]
-	innerCount, err := strconv.Atoui64(string(innerCountBytes))
+	mapStorage.Get("/foos")
+	
+	/*innerCount, err := strconv.Atoui64(string(innerCountBytes))
 	if err != nil {
 		t.Errorf(`strconv.Atoui64(string(innerCountBytes)) failed: %s`, err.String())
 	}
 	if innerCount != 1 {
 		t.Errorf(`innerCount is not 1 but %#v`, innerCount)
-	}
-	newCollectionBytes := (*storage)["/foos"]
+	}*/
+	/*newCollectionBytes := (*storage)["/foos"]
 	var newCollection map[string]map[string]string
 	if err := json.Unmarshal(newCollectionBytes, &newCollection); err != nil {
 		t.Errorf(`json.Unmarshal(newValueBytes, newValue) failed: %s`, err.String())
@@ -192,7 +189,7 @@ func TestDoPost(t *testing.T) {
 	newItemBytes := (*storage)["/foos/1"]
 	if string(newItemBytes) != "{}" {
 		t.Errorf(`newItemBytes is not %#v but %#v`, "{}", newItemBytes)
-	}
+	}*/
 }
 
 /*func TestJson(t *testing.T) {

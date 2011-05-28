@@ -1,28 +1,27 @@
 package starrpg
 
 import (
-	"strconv"
+	"os"
 	"strings"
 )
 
 type DummyStorage map[string][]byte
 
 func (s *DummyStorage) Get(key string) []byte {
-	item, ok := (*s)[key]
+	bytes, ok := (*s)[key]
 	if !ok {
 		return nil
 	}
-	return item
+	return bytes
 }
 
-func (s *DummyStorage) GetWithPrefix(prefix string) []*StorageEntry {
-	entries := make([]*StorageEntry, 0)
+func (s *DummyStorage) GetWithPrefix(prefix string) map[string][]byte {
+	entries := map[string][]byte{}
 	for key, value := range *s {
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		entry := &StorageEntry{Key:key, Value:value}
-		entries = append(entries, entry)
+		entries[key] = value
 	}
 	return entries
 }
@@ -39,16 +38,15 @@ func (s *DummyStorage) Delete(key string) bool {
 	return true
 }
 
-func (s *DummyStorage) Inc(key string) (uint64, bool) {
-	value, ok := (*s)[key]
-	if !ok {
-		(*s)[key] = []byte("1")
-		return 1, true
-	}
-	numValue, err := strconv.Atoui64(string(value))
+func (s *DummyStorage) Update(key string, f func([]byte) ([]byte, os.Error)) os.Error {
+	newBytes, err := f((*s)[key])
 	if err != nil {
-		return 0, false
+		return err
 	}
-	(*s)[key] = []byte(strconv.Uitoa64(numValue + 1))
-	return numValue + 1, true
+	if newBytes != nil {
+		(*s)[key] = newBytes
+	} else {
+		(*s)[key] = nil, false
+	}
+	return nil
 }
