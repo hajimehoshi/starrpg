@@ -348,7 +348,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 		}
 		body := buf[:size]
 		obj := map[string]string{}
-		if err := json.Unmarshal(body, obj); err != nil {
+		if err := json.Unmarshal(body, &obj); err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusBadRequest)
 			return

@@ -20,7 +20,7 @@ func (s *MapStorage) Get(key string) (map[string]string, os.Error) {
 		return nil, nil
 	}
 	obj := map[string]string{}
-	if err := json.Unmarshal(bytes, obj); err != nil {
+	if err := json.Unmarshal(bytes, &obj); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -31,7 +31,7 @@ func (s *MapStorage) GetWithPrefix(prefix string) (map[string]map[string]string,
 	objs := map[string]map[string]string{}
 	for key, bytes := range entries {
 		obj := map[string]string{}
-		if err := json.Unmarshal(bytes, obj); err != nil {
+		if err := json.Unmarshal(bytes, &obj); err != nil {
 			return nil, err
 		}
 		objs[key] = obj
@@ -54,10 +54,10 @@ func (s *MapStorage) Delete(key string) bool {
 
 func (s *MapStorage) Inc(key, subKey string) (uint64, os.Error) {
 	num := uint64(0)
-	err := s.storage.Update(key, func (bytes []byte) ([]byte, os.Error) {
+	err := s.storage.Update(key, func(bytes []byte) ([]byte, os.Error) {
 		obj := map[string]string{}
 		if bytes != nil {
-			if err := json.Unmarshal(bytes, obj); err != nil {
+			if err := json.Unmarshal(bytes, &obj); err != nil {
 				return nil, err
 			}
 		}
