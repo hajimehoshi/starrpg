@@ -66,13 +66,13 @@ func handleHome(conn http.ResponseWriter, req *http.Request) {
 		return
 	}
 	htmlPath := getHTMLViewPath(req.URL.Path)
-	data, found, err := GetFileFromCache(htmlPath)
+	data, err := GetFileFromCache(htmlPath)
 	if err != nil {
 		log.Print(err)
 		conn.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if !found {
+	if data == nil {
 		log.Print(htmlPath + " was not found")
 		conn.WriteHeader(http.StatusInternalServerError)
 		return
@@ -112,10 +112,6 @@ func getHTTPMethod(method string) int {
 	return httpMethodNone
 }
 
-func isGettablePath(path string) bool {
-	return true
-}
-
 func isPostablePath(path string) bool {
 	var pathRegExp = regexp.MustCompile(`^/games$`)
 	if pathRegExp.MatchString(path) {
@@ -141,10 +137,7 @@ func isDeletablePath(path string) bool {
 }
 
 func getAllowHeader(path string) string {
-	allow := "OPTIONS"
-	if isGettablePath(path) {
-		allow += ", GET, HEAD"
-	}
+	allow := "OPTIONS, GET, HEAD"
 	if isPostablePath(path) {
 		allow += ", POST"
 	}
@@ -166,13 +159,13 @@ func sendResponseNotFound(conn http.ResponseWriter, req *http.Request) {
 		return
 	}
 	notFoundFilePath := filepath.Join("views", "not_found.html")
-	content, found, err := GetFileFromCache(notFoundFilePath)
+	content, err := GetFileFromCache(notFoundFilePath)
 	if err != nil {
 		log.Print(err)
 		conn.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if !found {
+	if content == nil {
 		log.Print(notFoundFilePath + " was not found")
 		conn.WriteHeader(http.StatusInternalServerError)
 		return
@@ -198,63 +191,66 @@ func getHTMLViewPath(path string) string {
 	return ""
 }
 
-func doGet(ms *MapStorage, path string, acceptHeader string) (contentType string, content []byte, err os.Error) {
-	content2, found, err := GetFileFromCache(filepath.Join("public", path))
-	content = content2
-	if err != nil {
-		return "", []byte{}, err
-	}
-	if found {
-		switch {
-		case strings.HasSuffix(path, ".js"):
-			contentType = "text/javascript; charset=utf-8"
-		case strings.HasSuffix(path, ".css"):
-			contentType = "text/css; charset=utf-8"
-		case path == "/favicon.ico":
-			contentType = "image/png"
-		default:
-			contentType = "application/octet-stream"
+func doGet(ms *MapStorage, path string, acceptHeader string) (string, []byte, os.Error) {
+	{
+		content, err := GetFileFromCache(filepath.Join("public", path))
+		if err != nil {
+			return "", []byte{}, err
 		}
-		return
+		if content != nil {
+			var contentType string
+			switch {
+			case strings.HasSuffix(path, ".js"):
+				contentType = "text/javascript; charset=utf-8"
+			case strings.HasSuffix(path, ".css"):
+				contentType = "text/css; charset=utf-8"
+			case path == "/favicon.ico":
+				contentType = "image/png" // TODO: modify?
+			default:
+				contentType = "application/octet-stream"
+			}
+			return contentType, content, nil
+		}
 	}
-	obj, err := ms.Get(path)
-	if err != nil {
-		return "", nil, err
+	{
+		// /model -> GetWithPrefix(/model)
+		// /model/item -> Get(/model/item)
+		// /model/item/model -> GetWithPrefix(/model/item/model/)
+		obj, err := ms.Get(path)
+		if err != nil {
+			return "", nil, err
+		}
+		if obj == nil {
+			return "", nil, nil
+		}
+		content, err := json.Marshal(obj)
+		if err != nil {
+			return "", nil, err
+		}
+		jsonQVal := checkAcceptHeader("application/json", acceptHeader)
+		xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
+		htmlQVal := checkAcceptHeader("text/html", acceptHeader)
+		if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
+			return "", nil, nil
+		}
+		if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
+			return "application/json; charset=utf-8", content, nil
+		}
 	}
-	if obj == nil {
-		return "", nil, nil
+	{
+		htmlPath := getHTMLViewPath(path)
+		if htmlPath == "" {
+			return "", nil, nil
+		}
+		content, err := GetFileFromCache(htmlPath)
+		if err != nil {
+			return "", nil, err
+		}
+		if content == nil {
+			return "", nil, nil
+		}
+		return "application/xhtml+xml; charset=utf-8", content, nil
 	}
-	contents2, err := json.Marshal(obj)
-	if err != nil {
-		return "", nil, err
-	}
-	content = contents2
-	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
-	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
-	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
-	if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
-		return "", nil, nil
-	}
-	if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
-		contentType = "application/json; charset=utf-8"
-		return
-	}
-	// TODO: fix path
-	htmlPath := getHTMLViewPath(path)
-	if htmlPath == "" {
-		return "", nil, nil
-	}
-	content3, found, err := GetFileFromCache(htmlPath)
-	content = content3
-	if err != nil {
-		return "", nil, err
-	}
-	if !found {
-		// TODO: 異常事態
-		return "", nil, nil
-	}
-	contentType = "application/xhtml+xml; charset=utf-8"
-	return
 }
 
 func doPost(ms *MapStorage, path string) (string, os.Error) {
@@ -285,10 +281,10 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 		}
 		conn.WriteHeader(http.StatusOK)
 	case httpMethodGet, httpMethodHead:
-		if !isGettablePath(path) {
+		/*if !isGettablePath(path) {
 			sendResponseMethodNotAllowed(conn, req)
 			return
-		}
+		}*/
 		contentType, content, err := doGet(r.MapStorage, path, req.Header.Get("Accept"))
 		if err != nil {
 			log.Print(err)
@@ -296,10 +292,6 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// TODO: returns 406?
-		/*if contentType == "" {
-			conn.WriteHeader(http.StatusNotAcceptable)
-			return
-		}*/
 		if len(content) == 0 {
 			log.Print(path, " not found")
 			sendResponseNotFound(conn, req)

@@ -5,7 +5,6 @@ TARG:=hajimehoshi/starrpg
 GOFILES:=\
 	dummy_storage.go \
 	file_cache.go \
-	file_storage.go \
 	handler.go \
 	map_storage.go \
 
