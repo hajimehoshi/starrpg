@@ -13,58 +13,19 @@ import (
 )
 
 type Storage interface {
-	Get(key string) ([]byte, bool)
-	GetWithPrefix(key string) ([][]byte)
+	Get(key string) []byte
+	GetWithPrefix(key string) ([]*StorageEntry)
 	Set(key string, value []byte)
 	Delete(key string) bool
 	Inc(key string) (uint64, bool)
 }
 
-type DummyStorage map[string][]byte
-
-func (s *DummyStorage) Get(key string) ([]byte, bool) {
-	item, ok := (*s)[key]
-	return item, ok
+type StorageEntry struct {
+	Key string
+	Value []byte
 }
 
-func (s *DummyStorage) GetWithPrefix(prefix string) [][]byte {
-	values := make([][]byte, 0)
-	for key, value := range *s {
-		if !strings.HasPrefix(key, prefix) {
-			continue
-		}
-		values = append(values, value)
-	}
-	return values
-}
-
-func (s *DummyStorage) Set(key string, value []byte) {
-	(*s)[key] = value
-}
-
-func (s *DummyStorage) Delete(key string) bool {
-	if _, ok := (*s)[key]; !ok {
-		return false
-	}
-	(*s)[key] = []byte{}, false
-	return true
-}
-
-func (s *DummyStorage) Inc(key string) (uint64, bool) {
-	value, ok := (*s)[key]
-	if !ok {
-		(*s)[key] = []byte("1")
-		return 1, true
-	}
-	numValue, err := strconv.Atoui64(string(value))
-	if err != nil {
-		return 0, false
-	}
-	(*s)[key] = []byte(strconv.Uitoa64(numValue + 1))
-	return numValue + 1, true
-}
-
-/*type MapStorage struct {
+type MapStorage struct {
 	storage Storage
 }
 
@@ -72,22 +33,30 @@ func NewMapStorage(storage Storage) *MapStorage {
 	return &MapStorage{storage:storage}
 }
 
-func (s *MapStorage) Get(key string) (map[string]string, bool) {
-	bytes, ok := storage.Get(key)
-	if !ok {
-		return nil, ok
+func (s *MapStorage) Get(key string) (map[string]string, os.Error) {
+	bytes := s.storage.Get(key)
+	if bytes == nil {
+		return nil, nil
 	}
 	var value map[string]string
-	
-	return value, true
+	if err := json.Unmarshal(bytes, value); err != nil {
+		return nil, err
+	}
+	return value, nil
 }
 
-func (s *MapStorage) Set(key string, value map[string]string) {
+func (s *MapStorage) Set(key string, value map[string]string) os.Error {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	s.storage.Set(key, bytes)
+	return nil
 }
 
 func (s *MapStorage) Delete(key string) bool {
-	return false
-}*/
+	return s.storage.Delete(key)
+}
 
 func checkAcceptHeader(mediaType, accept string) float64 {
 	splitedMediaType := strings.Split(mediaType, "/", -1)
@@ -287,11 +256,11 @@ func doGet(storage Storage, path string, acceptHeader string) (contentType strin
 		}
 		return
 	}
-	content2, ok := storage.Get(path)
-	content = content2
-	if !ok {
+	content2 = storage.Get(path)
+	if content2 == nil {
 		return "", []byte{}, nil
 	}
+	content = content2
 	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
 	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
 	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
@@ -322,8 +291,8 @@ func doPost(storage Storage, path string) (string, os.Error) {
 	if !ok {
 		return "", os.NewError(fmt.Sprintf(`storage.Inc(%#v + "/inner-count") failed!`, path))
 	}
-	values, ok := storage.Get(path)
-	if !ok {
+	values := storage.Get(path)
+	if values == nil {
 		values = []byte("{}")
 	}
 	var items map[string]map[string]string
