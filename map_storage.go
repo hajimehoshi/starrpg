@@ -6,15 +6,15 @@ import (
 	"strconv"
 )
 
-type MapStorage struct {
+type mapStorageImpl struct {
 	storage Storage
 }
 
-func NewMapStorage(storage Storage) *MapStorage {
-	return &MapStorage{storage:storage}
+func NewMapStorage(storage Storage) MapStorage {
+	return &mapStorageImpl{storage:storage}
 }
 
-func (s *MapStorage) Get(key string) (map[string]string, os.Error) {
+func (s *mapStorageImpl) Get(key string) (map[string]string, os.Error) {
 	bytes := s.storage.Get(key)
 	if bytes == nil {
 		return nil, nil
@@ -26,8 +26,8 @@ func (s *MapStorage) Get(key string) (map[string]string, os.Error) {
 	return obj, nil
 }
 
-func (s *MapStorage) GetWithPrefix(prefix string) (map[string]map[string]string, os.Error) {
-	entries := s.storage.GetWithPrefix(prefix)
+func (s *mapStorageImpl) GetWithPrefix(prefix string) (map[string]map[string]string, os.Error) {
+	entries := s.storage.GetWithPrefix(prefix) // returns entries with full keys?
 	objs := map[string]map[string]string{}
 	for key, bytes := range entries {
 		obj := map[string]string{}
@@ -39,7 +39,7 @@ func (s *MapStorage) GetWithPrefix(prefix string) (map[string]map[string]string,
 	return objs, nil
 }
 
-func (s *MapStorage) Set(key string, obj map[string]string) os.Error {
+func (s *mapStorageImpl) Set(key string, obj map[string]string) os.Error {
 	bytes, err := json.Marshal(obj)
 	if err != nil {
 		return err
@@ -48,11 +48,11 @@ func (s *MapStorage) Set(key string, obj map[string]string) os.Error {
 	return nil
 }
 
-func (s *MapStorage) Delete(key string) bool {
+func (s *mapStorageImpl) Delete(key string) bool {
 	return s.storage.Delete(key)
 }
 
-func (s *MapStorage) Inc(key, subKey string) (uint64, os.Error) {
+func (s *mapStorageImpl) Inc(key, subKey string) (uint64, os.Error) {
 	num := uint64(0)
 	err := s.storage.Update(key, func(bytes []byte) ([]byte, os.Error) {
 		obj := map[string]string{}

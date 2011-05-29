@@ -7,6 +7,7 @@ GOFILES:=\
 	file_cache.go \
 	handler.go \
 	map_storage.go \
+	resource_storage.go \
 
 include $(GOROOT)/src/Make.pkg
 

@@ -19,6 +19,21 @@ type Storage interface {
 	Update(key string, f func([]byte) ([]byte, os.Error)) os.Error
 }
 
+type MapStorage interface {
+	Get(key string) (map[string]string, os.Error)
+	GetWithPrefix(prefix string) (map[string]map[string]string, os.Error)
+	Set(key string, obj map[string]string) os.Error
+	Delete(key string) bool
+	Inc(key, subKey string) (uint64, os.Error)
+}
+
+type ResourceStorage interface {
+	Get(urlPath string) (map[string]string, os.Error)
+	GetChildren(urlPath string) (map[string]map[string]string, os.Error)
+	Set(urlPath string, obj map[string]string) os.Error
+	Create(urlPath string) (uint64, os.Error)
+}
+
 func checkAcceptHeader(mediaType, accept string) float64 {
 	splitedMediaType := strings.Split(mediaType, "/", -1)
 	if len(splitedMediaType) != 2 {
@@ -121,7 +136,7 @@ func isPostablePath(path string) bool {
 }
 
 func isPuttablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/(maps|planes|items)/[a-zA-Z0-9_\-]+)?$`)
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/(maps|items)/[a-zA-Z0-9_\-]+)?$`)
 	if pathRegExp.MatchString(path) {
 		return true
 	}
@@ -129,7 +144,7 @@ func isPuttablePath(path string) bool {
 }
 
 func isDeletablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/(maps|planes|items)/[a-zA-Z0-9_\-]+)?$`)
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/(maps|items)/[a-zA-Z0-9_\-]+)?$`)
 	if pathRegExp.MatchString(path) {
 		return true
 	}
@@ -191,13 +206,14 @@ func getHTMLViewPath(path string) string {
 	return ""
 }
 
-func doGet(ms *MapStorage, path string, acceptHeader string) (string, []byte, os.Error) {
+func doGet(rs ResourceStorage, path string, acceptHeader string) (string, []byte, os.Error) {
 	{
 		content, err := GetFileFromCache(filepath.Join("public", path))
 		if err != nil {
-			return "", []byte{}, err
+			return "", nil, err
 		}
 		if content != nil {
+			// TODO: check acceptHeader?
 			var contentType string
 			switch {
 			case strings.HasSuffix(path, ".js"):
@@ -212,13 +228,37 @@ func doGet(ms *MapStorage, path string, acceptHeader string) (string, []byte, os
 			return contentType, content, nil
 		}
 	}
-	{
-		// /model -> GetWithPrefix(/model)
-		// /model/item -> Get(/model/item)
-		// /model/item/model -> GetWithPrefix(/model/item/model/)
-		obj, err := ms.Get(path)
-		if err != nil {
-			return "", nil, err
+	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
+	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
+	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
+	if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
+		return "", nil, nil
+	}
+	if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
+		if len(path) == 0 {
+			return "", nil, nil
+		}
+		if 1 < len(path) && path[len(path) - 1] == '/' {
+			path = path[:len(path) - 1]
+		}
+		slashCount := strings.Count(path, "/")
+		if slashCount == 0 || slashCount == 1 {
+			return "", nil, nil
+		}
+		var obj interface{}
+		switch slashCount % 2 {
+		case 0:
+			obj2, err := rs.Get(path)
+			if err != nil {
+				return "", nil, err
+			}
+			obj = obj2
+		case 1:
+			obj2, err := rs.GetChildren(path)
+			if err != nil {
+				return "", nil, err
+			}
+			obj = obj2
 		}
 		if obj == nil {
 			return "", nil, nil
@@ -227,44 +267,40 @@ func doGet(ms *MapStorage, path string, acceptHeader string) (string, []byte, os
 		if err != nil {
 			return "", nil, err
 		}
-		jsonQVal := checkAcceptHeader("application/json", acceptHeader)
-		xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
-		htmlQVal := checkAcceptHeader("text/html", acceptHeader)
-		if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
-			return "", nil, nil
-		}
-		if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
-			return "application/json; charset=utf-8", content, nil
-		}
+		return "application/json; charset=utf-8", content, nil
 	}
-	{
-		htmlPath := getHTMLViewPath(path)
-		if htmlPath == "" {
-			return "", nil, nil
-		}
-		content, err := GetFileFromCache(htmlPath)
-		if err != nil {
-			return "", nil, err
-		}
-		if content == nil {
-			return "", nil, nil
-		}
-		return "application/xhtml+xml; charset=utf-8", content, nil
+	htmlPath := getHTMLViewPath(path)
+	if htmlPath == "" {
+		return "", nil, nil
 	}
+	content, err := GetFileFromCache(htmlPath)
+	if err != nil {
+		return "", nil, err
+	}
+	if content == nil {
+		return "", nil, nil
+	}
+	return "application/xhtml+xml; charset=utf-8", content, nil
 }
 
-func doPost(ms *MapStorage, path string) (string, os.Error) {
-	newID, err := ms.Inc(path, "count")
+func doPost(rs ResourceStorage, path string) (string, os.Error) {
+	newID, err := rs.Create(path)
 	if err != nil {
 		return "", err
 	}
+	if newID == 0 {
+		return "", nil
+	}
 	newItemPath := path + "/" + strconv.Uitoa64(newID)
-	ms.Set(newItemPath, map[string]string{})
+	// TODO: これはやるべきか?
+	if err := rs.Set(newItemPath, map[string]string{}); err != nil {
+		return "", err
+	}
 	return newItemPath, nil
 }
 
 type ResourceHandler struct {
-	*MapStorage
+	ResourceStorage
 }
 
 func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
@@ -281,11 +317,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 		}
 		conn.WriteHeader(http.StatusOK)
 	case httpMethodGet, httpMethodHead:
-		/*if !isGettablePath(path) {
-			sendResponseMethodNotAllowed(conn, req)
-			return
-		}*/
-		contentType, content, err := doGet(r.MapStorage, path, req.Header.Get("Accept"))
+		contentType, content, err := doGet(r.ResourceStorage, path, req.Header.Get("Accept"))
 		if err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusInternalServerError)
@@ -308,10 +340,14 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			sendResponseMethodNotAllowed(conn, req)
 			return
 		}
-		newPath, err := doPost(r.MapStorage, path)
+		newPath, err := doPost(r.ResourceStorage, path)
 		if err != nil {
 			log.Print(err)
 			conn.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if newPath == "" {
+			sendResponseNotFound(conn, req)
 			return
 		}
 		// TODO: fix schema
@@ -345,7 +381,11 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			conn.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		r.MapStorage.Set(path, obj)
+		if err := r.ResourceStorage.Set(path, obj); err != nil {
+			log.Print(err)
+			conn.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		conn.WriteHeader(http.StatusOK)
 	case httpMethodDelete:
 		if !isDeletablePath(path) {
@@ -353,10 +393,10 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// TODO: 子リソースの再帰的削除
-		if !r.MapStorage.Delete(path) {
+		/*if !r.MapStorage.Delete(urlPathToStoragePath(path)) {
 			sendResponseNotFound(conn, req)
 			return
-		}
+		}*/
 		conn.WriteHeader(http.StatusOK)
 	default:
 		sendResponseMethodNotAllowed(conn, req)
@@ -366,6 +406,7 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 var (
 	storage_ = &DummyStorage{}
 	mapStorage_ = NewMapStorage(storage_)
+	resourceStorage_ = NewResourceStorage(mapStorage_)
 )
 
 func Handler(conn http.ResponseWriter, req *http.Request) {
@@ -373,7 +414,7 @@ func Handler(conn http.ResponseWriter, req *http.Request) {
 	case path == "/":
 		handleHome(conn, req)
 	default:
-		resourceHandler := &ResourceHandler{mapStorage_}
+		resourceHandler := &ResourceHandler{resourceStorage_}
 		resourceHandler.Handle(conn, req)
 	}
 }

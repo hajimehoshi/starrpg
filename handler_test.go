@@ -9,7 +9,7 @@ func TestCheckAcceptHeader(t *testing.T) {
 	type TestCase struct {
 		mediaType string
 		accept string
-		expectedResult float64
+		expected float64
 	}
 	testCases := []TestCase{
 		{"application/xml",
@@ -54,11 +54,11 @@ func TestCheckAcceptHeader(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		if actual := checkAcceptHeader(testCase.mediaType, testCase.accept);
-		actual != testCase.expectedResult {
+		actual != testCase.expected {
 			t.Errorf("checkAcceptHeader(%#v, %#v) is not %#v but %#v",
 				testCase.mediaType,
 				testCase.accept,
-				testCase.expectedResult,
+				testCase.expected,
 				actual)
 		}
 	}
@@ -67,7 +67,7 @@ func TestCheckAcceptHeader(t *testing.T) {
 func TestIsPostablePath(t *testing.T) {
 	type TestCase struct {
 		path string
-		expectedResult bool
+		expected bool
 	}
 	testCases := []TestCase{
 		{"/games", true},
@@ -86,10 +86,10 @@ func TestIsPostablePath(t *testing.T) {
 		{"games", false},
 	}
 	for _, testCase := range testCases {
-		if actual := isPostablePath(testCase.path); actual != testCase.expectedResult {
+		if actual := isPostablePath(testCase.path); actual != testCase.expected {
 			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
 			testCase.path,
-			testCase.expectedResult,
+			testCase.expected,
 			actual)
 		}
 	}
@@ -98,7 +98,7 @@ func TestIsPostablePath(t *testing.T) {
 func TestIsPuttablePath(t *testing.T) {
 	type TestCase struct {
 		path string
-		expectedResult bool
+		expected bool
 	}
 	testCases := []TestCase{
 		{"/games", false},
@@ -117,10 +117,10 @@ func TestIsPuttablePath(t *testing.T) {
 		{"games", false},
 	}
 	for _, testCase := range testCases {
-		if actual := isPuttablePath(testCase.path); actual != testCase.expectedResult {
+		if actual := isPuttablePath(testCase.path); actual != testCase.expected {
 			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
 			testCase.path,
-			testCase.expectedResult,
+			testCase.expected,
 			actual)
 		}
 	}
@@ -129,7 +129,7 @@ func TestIsPuttablePath(t *testing.T) {
 func TestIsDeletablePath(t *testing.T) {
 	type TestCase struct {
 		path string
-		expectedResult bool
+		expected bool
 	}
 	testCases := []TestCase{
 		{"/games", false},
@@ -148,11 +148,11 @@ func TestIsDeletablePath(t *testing.T) {
 		{"games", false},
 	}
 	for _, testCase := range testCases {
-		if actual := isDeletablePath(testCase.path); actual != testCase.expectedResult {
+		if actual := isDeletablePath(testCase.path); actual != testCase.expected {
 			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
-			testCase.path,
-			testCase.expectedResult,
-			actual)
+				testCase.path,
+				testCase.expected,
+				actual)
 		}
 	}
 }
@@ -160,7 +160,8 @@ func TestIsDeletablePath(t *testing.T) {
 func TestDoPost(t *testing.T) {
 	storage := &DummyStorage{}
 	mapStorage := NewMapStorage(storage)
-	newPath, err := doPost(mapStorage, "/foos")
+	resourceStorage := NewResourceStorage(mapStorage)
+	newPath, err := doPost(resourceStorage, "/foos")
 	if err != nil {
 		t.Errorf(`doPost(storage, "/foos") failed: %s`, err.String())
 	}
@@ -191,12 +192,3 @@ func TestDoPost(t *testing.T) {
 		t.Errorf(`newItemBytes is not %#v but %#v`, "{}", newItemBytes)
 	}*/
 }
-
-/*func TestJson(t *testing.T) {
-	data := map[string]map[string]string {
-		"1": {"name": "ii"},
-		"2": {"name": "fdajslkfjkl"},
-	}
-	json, err := json.Marshal(data)
-	fmt.Println(string(json), err)
-}*/
