@@ -55,6 +55,13 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 		}
 		return http.StatusOK, map[string]string{"Content-Type":contentType}, fileContent, nil
 	}
+	resourceObj, err := r.ResourceStorage.Get(path)
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, err
+	}
+	if resourceObj == nil {
+		return http.StatusNotFound, nil, nil, err
+	}
 	acceptHeader := req.Header.Get("Accept")
 	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
 	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
@@ -77,11 +84,7 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 		var obj interface{}
 		switch slashCount % 2 {
 		case 0:
-			obj2, err := r.ResourceStorage.Get(path)
-			if err != nil {
-				return http.StatusInternalServerError, nil, nil, err
-			}
-			obj = obj2
+			obj = resourceObj
 		case 1:
 			obj2, err := r.ResourceStorage.GetChildren(path)
 			if err != nil {
@@ -127,10 +130,9 @@ func (r *resourceRequestProcessor) DoPost(req *http.Request) (int, map[string]st
 		return http.StatusNotFound, nil, nil, nil
 	}
 	newPath := path + "/" + strconv.Uitoa64(newID)
-	// TODO: これはやるべきか?
-	/*if err := rs.Set(newItemPath, map[string]string{}); err != nil {
-		return "", err
-	}*/
+	if err := r.ResourceStorage.Set(newPath, map[string]string{}); err != nil {
+		return http.StatusInternalServerError, nil, nil, err
+	}
 	// TODO: https?
 	location := "http://" + req.Host + newPath
 	return http.StatusCreated, map[string]string{"Location": location}, nil, nil

@@ -17,6 +17,9 @@ function createServer() {
                     } else {
                         // unexpected!
                     }
+                },
+                error: function (jqXHR, status) {
+                    // TODO: logging
                 }
             };
             $.ajax(args);
@@ -30,6 +33,9 @@ function createServer() {
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json',
                 type: "PUT",
+                error: function (jqXHR, status) {
+                    // TODO: logging
+                }
             };
             $.ajax(args);
         }
