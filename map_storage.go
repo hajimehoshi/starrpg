@@ -52,29 +52,39 @@ func (s *mapStorageImpl) Delete(key string) bool {
 	return s.storage.Delete(key)
 }
 
-func (s *mapStorageImpl) Inc(key, subKey string) (uint64, os.Error) {
-	num := uint64(0)
-	err := s.storage.Update(key, func(bytes []byte) ([]byte, os.Error) {
+func (s *mapStorageImpl) Update(key string, f func(obj map[string]string) os.Error) os.Error {
+	err := s.storage.Update(key, func (bytes []byte) ([]byte, os.Error) {
 		obj := map[string]string{}
-		if bytes != nil {
+		if 0 < len(bytes) {
 			if err := json.Unmarshal(bytes, &obj); err != nil {
 				return nil, err
 			}
 		}
-		numStr, ok := obj[subKey]
-		if ok {
-			num2, err := strconv.Atoui64(numStr)
-			if err != nil {
-				return nil, err
-			}
-			num = num2
+		if err := f(obj); err != nil {
+			return nil, err
 		}
-		obj[subKey] = strconv.Uitoa64(num + 1)
 		bytes, err := json.Marshal(obj)
 		if err != nil {
 			return nil, err
 		}
 		return bytes, nil
+	})
+	return err
+}
+
+func (s *mapStorageImpl) Inc(key, subKey string) (uint64, os.Error) {
+	num := uint64(0)
+	err := s.Update(key, func (obj map[string]string) os.Error {
+		numStr, ok := obj[subKey]
+		if ok {
+			num2, err := strconv.Atoui64(numStr)
+			if err != nil {
+				return err
+			}
+			num = num2
+		}
+		obj[subKey] = strconv.Uitoa64(num + 1)
+		return nil
 	})
 	if err != nil {
 		return 0, err

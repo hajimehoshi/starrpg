@@ -14,7 +14,7 @@ func TestMapStorageGetPrefix(t *testing.T) {
 	mapStorage.Set("/foo/abcde", map[string]string{"value": "value-abcde"})
 	objs, err := mapStorage.GetWithPrefix("/foo/")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if objs == nil {
 		t.Error(`mapStorage.GetWithPrefix("/foo") returns nil`)
@@ -41,7 +41,7 @@ func TestMapStorageSet(t *testing.T) {
 		expected := "baz"
 		m, err := mapStorage.Get("foo")
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		actual := m["bar"]
 		if expected != actual {
@@ -57,7 +57,7 @@ func TestMapStorageInc(t *testing.T) {
 		expected := uint64(1)
 		actual, err := mapStorage.Inc("foo", "count")
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		if expected != actual {
 			t.Errorf(`mapStorage.Inc("foo", "count") is not %#v but %#v`, expected, actual)
@@ -67,7 +67,7 @@ func TestMapStorageInc(t *testing.T) {
 		expected := uint64(2)
 		actual, err := mapStorage.Inc("foo", "count")
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		if expected != actual {
 			t.Errorf(`mapStorage.Inc("foo", "count") is not %#v but %#v`, expected, actual)

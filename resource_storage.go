@@ -82,6 +82,21 @@ func (s *resourceStorageImpl) Set(urlPath string, obj map[string]string) os.Erro
 	return s.mapStorage.Set(storagePath, obj)
 }
 
+func (s *resourceStorageImpl) Delete(urlPath string) (bool, os.Error) {
+	storagePath := s.urlPathToStoragePath(urlPath)
+	if storagePath == "" {
+		return false, nil
+	}
+	obj, err := s.mapStorage.Get(storagePath)
+	if err != nil {
+		return false, err
+	}
+	if obj == nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (s *resourceStorageImpl) Create(urlPath string) (uint64, os.Error) {
 	storagePath := s.urlPathToStoragePath(urlPath)
 	if storagePath == "" {

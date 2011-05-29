@@ -76,7 +76,7 @@ func TestResourceStorageGetChildren(t *testing.T) {
 	resourceStorage.Set("/foo/abcde", map[string]string{"value": "value-abcde"})
 	objs, err := resourceStorage.GetChildren("/foo")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if objs == nil {
 		t.Error(`resourceStorage.GetChildren("/foo") returns nil`)

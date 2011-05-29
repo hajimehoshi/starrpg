@@ -23,6 +23,7 @@ type MapStorage interface {
 	GetWithPrefix(prefix string) (map[string]map[string]string, os.Error)
 	Set(key string, obj map[string]string) os.Error
 	Delete(key string) bool
+	Update(key string, f func(map[string]string) os.Error) os.Error
 	Inc(key, subKey string) (uint64, os.Error)
 }
 
@@ -30,7 +31,7 @@ type ResourceStorage interface {
 	Get(urlPath string) (map[string]string, os.Error)
 	GetChildren(urlPath string) (map[string]map[string]string, os.Error)
 	Set(urlPath string, obj map[string]string) os.Error
-	//Delete(urlPath string) (bool, os.Error)
+	Delete(urlPath string) (bool, os.Error)
 	Create(urlPath string) (uint64, os.Error)
 }
 

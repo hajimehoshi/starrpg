@@ -39,7 +39,10 @@ func (s *DummyStorage) Delete(key string) bool {
 }
 
 func (s *DummyStorage) Update(key string, f func([]byte) ([]byte, os.Error)) os.Error {
-	newBytes, err := f((*s)[key])
+	bytes := (*s)[key]
+	oldBytes := make([]byte, len(bytes))
+	copy(oldBytes, bytes)
+	newBytes, err := f(oldBytes)
 	if err != nil {
 		return err
 	}
