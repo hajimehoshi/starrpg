@@ -67,9 +67,6 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	if resourceObj == nil {
-		return http.StatusNotFound, nil, nil, err
-	}
 	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
 	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
 	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
@@ -90,8 +87,12 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 		var obj interface{}
 		switch slashCount % 2 {
 		case 0:
+			if resourceObj == nil {
+				return http.StatusNotFound, nil, nil, err
+			}
 			obj = resourceObj
 		case 1:
+			// resourceObj may be nil
 			obj2, err := r.ResourceStorage.GetChildren(path)
 			if err != nil {
 				return http.StatusInternalServerError, nil, nil, err
@@ -108,6 +109,9 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 		contentType := "application/json; charset=utf-8"
 		responseHeader := map[string]string{"Content-Type": contentType}
 		return http.StatusOK, responseHeader, content, nil
+	}
+	if resourceObj == nil {
+		return http.StatusNotFound, nil, nil, err
 	}
 	htmlPath := getHTMLViewPath(path)
 	if htmlPath == "" {

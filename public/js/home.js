@@ -6,9 +6,11 @@ function init($) {
         }
         var callback = function (jqXHR, data) {
             var newGameURL = jqXHR.getResponseHeader("Location");
-            server.put(newGameURL + '/items', {});
+            var callback = function () {
+                location.replace(newGameURL);                
+            }
+            server.put(newGameURL + '/items/1', {}, callback);
             server.flush();
-            location.replace(newGameURL);
         }
         server.post('/games', data, callback);
         server.flush();

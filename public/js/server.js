@@ -34,7 +34,7 @@ function createServer($) {
             }
             $.ajax(args);
         },
-        put: function (path, data) {
+        put: function (path, data, callback) {
             // TODO: 即座に送るのではなく、ある程度キャッシュして最適化の後、
             // 送信するように修正
             var args = {
@@ -43,6 +43,11 @@ function createServer($) {
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json',
                 type: "PUT",
+                success: function (data, status, jqXHR) {
+                    if (callback instanceof Function) {
+                        callback(jqXHR, data);                        
+                    }
+                },
                 error: function (jqXHR, status) {
                     // TODO: logging
                 }

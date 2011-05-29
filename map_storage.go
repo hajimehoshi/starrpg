@@ -35,7 +35,7 @@ func (s *mapStorageImpl) Get(key string) (map[string]string, os.Error) {
 }
 
 func (s *mapStorageImpl) GetWithPrefix(prefix string) (map[string]map[string]string, os.Error) {
-	entries := s.storage.GetWithPrefix(prefix) // returns entries with full keys?
+	entries := s.storage.GetWithPrefix(prefix)
 	objs := map[string]map[string]string{}
 	for key, bytes := range entries {
 		obj := map[string]string{}

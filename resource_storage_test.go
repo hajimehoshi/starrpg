@@ -69,28 +69,55 @@ func TestResourceStorageGetChildren(t *testing.T) {
 	mapStorage := NewMapStorage(storage)
 	resourceStorage := NewResourceStorage(mapStorage)
 	resourceStorage.Set("/foo", map[string]string{"value": "value"})
+	resourceStorage.Set("/bar", map[string]string{"value": "value"})
 	resourceStorage.Set("/foo/1", map[string]string{"value": "value-1"})
-	resourceStorage.Set("/bar/1", map[string]string{"value": "value-1"})
+	resourceStorage.Set("/baz/1", map[string]string{"value": "value-1"})
 	resourceStorage.Set("/foo/2", map[string]string{"value": "value-2"})
 	resourceStorage.Set("/foo/2/bar", map[string]string{"value": "value-2-bar"})
 	resourceStorage.Set("/foo/abcde", map[string]string{"value": "value-abcde"})
-	objs, err := resourceStorage.GetChildren("/foo")
-	if err != nil {
-		t.Fatal(err)
+	{
+		objs, err := resourceStorage.GetChildren("/foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if objs == nil {
+			t.Error(`resourceStorage.GetChildren("/foo") returns nil`)
+		}
+		if expected, actual := 3, len(objs); expected != actual {
+			t.Errorf(`len(obj) is not %#v but %#v`, expected, actual)
+		}
+		if expected, actual := "value-1", objs["1"]["value"]; expected != actual {
+			t.Errorf(`objs["1"]["value"] is not %#v but %#v`, expected, actual)
+		}
+		if expected, actual := "value-2", objs["2"]["value"]; expected != actual {
+			t.Errorf(`objs["2"]["value"] is not %#v but %#v`, expected, actual)
+		}
+		if expected, actual := "value-abcde", objs["abcde"]["value"]; expected != actual {
+			t.Errorf(`objs["abcde"]["value"] is not %#v but %#v`, expected, actual)
+		}
 	}
-	if objs == nil {
-		t.Error(`resourceStorage.GetChildren("/foo") returns nil`)
+	{
+		objs, err := resourceStorage.GetChildren("/bar")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if objs == nil {
+			t.Error(`resourceStorage.GetChildren("/bar") returns nil`)
+		}
+		if expected, actual := 0, len(objs); expected != actual {
+			t.Errorf(`len(obj) is not %#v but %#v`, expected, actual)
+		}
 	}
-	if expected, actual := 3, len(objs); expected != actual {
-		t.Errorf(`len(obj) is not %#v but %#v`, expected, actual)
-	}
-	if expected, actual := "value-1", objs["1"]["value"]; expected != actual {
-		t.Errorf(`objs["1"]["value"] is not %#v but %#v`, expected, actual)
-	}
-	if expected, actual := "value-2", objs["2"]["value"]; expected != actual {
-		t.Errorf(`objs["2"]["value"] is not %#v but %#v`, expected, actual)
-	}
-	if expected, actual := "value-abcde", objs["abcde"]["value"]; expected != actual {
-		t.Errorf(`objs["abcde"]["value"] is not %#v but %#v`, expected, actual)
+	{
+		objs, err := resourceStorage.GetChildren("/quxx")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if objs == nil {
+			t.Error(`resourceStorage.GetChildren("/quxx") returns nil`)
+		}
+		if expected, actual := 0, len(objs); expected != actual {
+			t.Errorf(`len(obj) is not %#v but %#v`, expected, actual)
+		}
 	}
 }
