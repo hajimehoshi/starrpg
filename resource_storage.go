@@ -87,13 +87,18 @@ func (s *resourceStorageImpl) Delete(urlPath string) (bool, os.Error) {
 	if storagePath == "" {
 		return false, nil
 	}
-	obj, err := s.mapStorage.Get(storagePath)
+	/*obj, err := s.mapStorage.Get(storagePath)
 	if err != nil {
 		return false, err
 	}
 	if obj == nil {
 		return false, nil
 	}
+	// TODO: impl*/
+	/*s.mapStorage.Update(storagePath, func (obj map[string]string) os.Error {
+		if obj == nil {
+		}
+	})*/
 	return true, nil
 }
 

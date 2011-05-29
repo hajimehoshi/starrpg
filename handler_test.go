@@ -112,7 +112,7 @@ func TestIsPuttablePath(t *testing.T) {
 		{"/foos/", false},
 		{"/foos/1", false},
 		{"/games/1/foos", false},
-		{"/games/1/foos/2", false},
+		{"/games/1/foos/2", true},
 		{"", false},
 		{"games", false},
 	}
@@ -135,7 +135,7 @@ func TestIsDeletablePath(t *testing.T) {
 		{"/games", false},
 		{"/games/1", true},
 		{"/games/1/maps", false},
-		{"/games/1/maps/2", true},
+		{"/games/1/maps/2", false},
 		{"/games/", false},
 		{"/games/1/", false},
 		{"/games/1/maps/", false},

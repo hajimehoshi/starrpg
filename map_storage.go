@@ -52,7 +52,7 @@ func (s *mapStorageImpl) Delete(key string) bool {
 	return s.storage.Delete(key)
 }
 
-func (s *mapStorageImpl) Update(key string, f func(obj map[string]string) os.Error) os.Error {
+func (s *mapStorageImpl) Update(key string, f func(obj map[string]string) (os.Error)) os.Error {
 	err := s.storage.Update(key, func (bytes []byte) ([]byte, os.Error) {
 		obj := map[string]string{}
 		if 0 < len(bytes) {

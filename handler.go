@@ -23,7 +23,7 @@ type MapStorage interface {
 	GetWithPrefix(prefix string) (map[string]map[string]string, os.Error)
 	Set(key string, obj map[string]string) os.Error
 	Delete(key string) bool
-	Update(key string, f func(map[string]string) os.Error) os.Error
+	Update(key string, f func(map[string]string) (os.Error)) os.Error
 	Inc(key, subKey string) (uint64, os.Error)
 }
 
@@ -118,7 +118,7 @@ func isPostablePath(path string) bool {
 }
 
 func isPuttablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/(maps|items)/[a-zA-Z0-9_\-]+)?$`)
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+)?$`)
 	if pathRegExp.MatchString(path) {
 		return true
 	}
@@ -126,7 +126,7 @@ func isPuttablePath(path string) bool {
 }
 
 func isDeletablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/(maps|items)/[a-zA-Z0-9_\-]+)?$`)
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+$`)
 	if pathRegExp.MatchString(path) {
 		return true
 	}
