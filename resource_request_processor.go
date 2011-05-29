@@ -10,6 +10,14 @@ import (
 	"path/filepath"
 )
 
+type ResourceStorage interface {
+	Get(urlPath string) (map[string]string, os.Error)
+	GetChildren(urlPath string) (map[string]map[string]string, os.Error)
+	Set(urlPath string, obj map[string]string) os.Error
+	Delete(urlPath string) (bool, os.Error)
+	Create(urlPath string) (uint64, os.Error)
+}
+
 type resourceRequestProcessor struct {
 	ResourceStorage
 }
@@ -35,6 +43,7 @@ func (r *resourceRequestProcessor) DoHead(req *http.Request) (int, map[string]st
 }
 
 func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]string, []byte, os.Error) {
+	acceptHeader := req.Header.Get("Accept")
 	path := req.URL.Path
 	fileContent, err := GetFileFromCache(filepath.Join("public", path))
 	if err != nil {
@@ -53,7 +62,11 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 		default:
 			contentType = "application/octet-stream"
 		}
-		return http.StatusOK, map[string]string{"Content-Type":contentType}, fileContent, nil
+		status := http.StatusOK
+		if checkAcceptHeader(contentType, acceptHeader) == 0 {
+			status  = http.StatusNotAcceptable
+		}
+		return status, map[string]string{"Content-Type":contentType}, fileContent, nil
 	}
 	resourceObj, err := r.ResourceStorage.Get(path)
 	if err != nil {
@@ -62,7 +75,6 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 	if resourceObj == nil {
 		return http.StatusNotFound, nil, nil, err
 	}
-	acceptHeader := req.Header.Get("Accept")
 	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
 	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
 	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
@@ -143,7 +155,7 @@ func (r *resourceRequestProcessor) DoPost(req *http.Request) (int, map[string]st
 		return http.StatusUnsupportedMediaType, nil, nil, nil
 	}
 	acceptHeader := req.Header.Get("Accept")
-	if jsonQVal := checkAcceptHeader("application/json", acceptHeader); jsonQVal == 0 {
+	if checkAcceptHeader("application/json", acceptHeader) == 0 {
 		return http.StatusNotAcceptable, nil, nil, nil
 	}
 	requestBody, tooLarge, err := r.getRequestBody(req)
@@ -188,7 +200,7 @@ func (r *resourceRequestProcessor) DoPut(req *http.Request) (int, map[string]str
 		return http.StatusUnsupportedMediaType, nil, nil, nil
 	}
 	acceptHeader := req.Header.Get("Accept")
-	if jsonQVal := checkAcceptHeader("application/json", acceptHeader); jsonQVal == 0 {
+	if checkAcceptHeader("application/json", acceptHeader) == 0 {
 		return http.StatusNotAcceptable, nil, nil, nil
 	}
 	requestBody, tooLarge, err := r.getRequestBody(req)

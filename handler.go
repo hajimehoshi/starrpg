@@ -10,31 +10,6 @@ import (
 	"strings"
 )
 
-type Storage interface {
-	Get(key string) []byte
-	GetWithPrefix(key string) (map[string][]byte)
-	Set(key string, value []byte)
-	Delete(key string) bool
-	Update(key string, f func([]byte) ([]byte, os.Error)) os.Error
-}
-
-type MapStorage interface {
-	Get(key string) (map[string]string, os.Error)
-	GetWithPrefix(prefix string) (map[string]map[string]string, os.Error)
-	Set(key string, obj map[string]string) os.Error
-	Delete(key string) bool
-	Update(key string, f func(map[string]string) (os.Error)) os.Error
-	Inc(key, subKey string) (uint64, os.Error)
-}
-
-type ResourceStorage interface {
-	Get(urlPath string) (map[string]string, os.Error)
-	GetChildren(urlPath string) (map[string]map[string]string, os.Error)
-	Set(urlPath string, obj map[string]string) os.Error
-	Delete(urlPath string) (bool, os.Error)
-	Create(urlPath string) (uint64, os.Error)
-}
-
 type RequestProcessor interface {
 	DoOptions(req *http.Request) (int, map[string]string, os.Error)
 	DoHead(req *http.Request) (int, map[string]string, os.Error)

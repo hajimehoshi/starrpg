@@ -6,6 +6,15 @@ import (
 	"strconv"
 )
 
+type MapStorage interface {
+	Get(key string) (map[string]string, os.Error)
+	GetWithPrefix(prefix string) (map[string]map[string]string, os.Error)
+	Set(key string, obj map[string]string) os.Error
+	Delete(key string) bool
+	Update(key string, f func(map[string]string) (os.Error)) os.Error
+	Inc(key, subKey string) (uint64, os.Error)
+}
+
 type resourceStorageImpl struct {
 	mapStorage MapStorage
 }

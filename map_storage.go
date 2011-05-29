@@ -6,6 +6,14 @@ import (
 	"strconv"
 )
 
+type Storage interface {
+	Get(key string) []byte
+	GetWithPrefix(key string) (map[string][]byte)
+	Set(key string, value []byte)
+	Delete(key string) bool
+	Update(key string, f func([]byte) ([]byte, os.Error)) os.Error
+}
+
 type mapStorageImpl struct {
 	storage Storage
 }
