@@ -1,20 +1,17 @@
 function init($) {
     function createGame(e) {
-        var args = {
-            url: '/games',
-            data: JSON.stringify({name:'New Game'}),
-            contentType: 'application/json; charset=utf-8',
-            dateType: 'json',
-            type: "POST",
-            success: function(data, status, jqXHR) {
-                if (jqXHR.status === 201) {
-                    location.replace(jqXHR.getResponseHeader("Location"));
-                } else {
-                    // unexpected                             
-                }
-            }
-        };
-        $.ajax(args);
+        var server = createServer($);
+        var data = {
+            name: 'New Game',
+        }
+        var callback = function (jqXHR, data) {
+            var newGameURL = jqXHR.getResponseHeader("Location");
+            server.put(newGameURL + '/items', {});
+            server.flush();
+            location.replace(newGameURL);
+        }
+        server.post('/games', data, callback);
+        server.flush();
         return false;
     }
     $("#createGame").click(createGame);

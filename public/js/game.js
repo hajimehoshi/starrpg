@@ -4,44 +4,6 @@ function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
-function createServer() {
-    return {
-        get: function (path, callback) {
-            var args = {
-                url: path,
-                dataType: 'json',
-                type: "GET",
-                success: function (data, status, jqXHR) {
-                    if (jqXHR.status == 200) {
-                        callback(data);
-                    } else {
-                        // unexpected!
-                    }
-                },
-                error: function (jqXHR, status) {
-                    // TODO: logging
-                }
-            };
-            $.ajax(args);
-        },
-        put: function (path, data) {
-            // TODO: 即座に送るのではなく、ある程度キャッシュして最適化の後、
-            // 送信するように修正
-            var args = {
-                url: path,
-                data: JSON.stringify(data),
-                contentType: 'application/json; charset=utf-8',
-                dataType: 'json',
-                type: "PUT",
-                error: function (jqXHR, status) {
-                    // TODO: logging
-                }
-            };
-            $.ajax(args);
-        }
-    };
-}
-
 function createEvent() {
     var registeredFuncs = [];
     return {
@@ -63,7 +25,7 @@ function createModel(server, path) {
     var cache = {};
     var updated = createEvent();
     var isLoaded = false;
-    server.get(path, function (data) {
+    server.get(path, function (jqXHR, data) {
                    cache = data;
                    updated.fire(cache);
                    isLoaded = true;
@@ -135,7 +97,7 @@ function init($) {
          $('.editPanelNavItem.default').click();
      })();
     (function () {
-         var server = createServer();
+         var server = createServer($);
          var game = createModel(server, location.pathname);
          var items = createModel(server, location.pathname + '/items');
          (function () {
