@@ -93,7 +93,7 @@ func isPostablePath(path string) bool {
 }
 
 func isPuttablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+)?$`)
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+)?)?$`)
 	if pathRegExp.MatchString(path) {
 		return true
 	}

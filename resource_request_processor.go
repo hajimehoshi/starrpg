@@ -75,14 +75,23 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 	}
 	if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
 		if len(path) == 0 {
+			// ?
 			return http.StatusNotFound, nil, nil, nil
 		}
+		// remove the last slash
 		if 1 < len(path) && path[len(path) - 1] == '/' {
 			path = path[:len(path) - 1]
 		}
+		if path == "/" {
+			return http.StatusNotAcceptable, nil, nil, nil
+		}
 		slashCount := strings.Count(path, "/")
-		if slashCount == 0 || slashCount == 1 {
+		if slashCount == 0 {
+			// ?
 			return http.StatusNotFound, nil, nil, nil
+		}
+		if slashCount == 1 {
+			return http.StatusNotAcceptable, nil, nil, nil
 		}
 		var obj interface{}
 		switch slashCount % 2 {
