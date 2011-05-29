@@ -12,8 +12,8 @@ import (
 
 type RequestProcessor interface {
 	DoOptions(req *http.Request) (int, map[string]string, os.Error)
-	DoHead(req *http.Request) (int, map[string]string, os.Error)
 	DoGet(req *http.Request) (int, map[string]string, []byte, os.Error)
+	DoHead(req *http.Request) (int, map[string]string, os.Error)
 	DoPost(req *http.Request) (int, map[string]string, []byte, os.Error)
 	DoPut(req *http.Request) (int, map[string]string, []byte, os.Error)
 	DoDelete(req *http.Request) (int, map[string]string, []byte, os.Error)
@@ -173,10 +173,10 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "OPTIONS":
 		status, header, err = requestProcessor.DoOptions(req)
-	case "HEAD":
-		status, header, err = requestProcessor.DoHead(req)
 	case "GET":
 		status, header, content, err = requestProcessor.DoGet(req)
+	case "HEAD":
+		status, header, err = requestProcessor.DoHead(req)
 	case "POST":
 		status, header, content, err = requestProcessor.DoPost(req)
 	case "PUT":

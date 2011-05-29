@@ -37,11 +37,6 @@ func (r *resourceRequestProcessor) DoOptions(req *http.Request) (int, map[string
 	return http.StatusOK, responseHeader, nil
 }
 
-func (r *resourceRequestProcessor) DoHead(req *http.Request) (int, map[string]string, os.Error) {
-	status, responseHeader, _, err := r.DoGet(req)
-	return status, responseHeader, err
-}
-
 func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]string, []byte, os.Error) {
 	acceptHeader := req.Header.Get("Accept")
 	path := req.URL.Path
@@ -128,6 +123,11 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 	contentType := "application/xhtml+xml; charset=utf-8";
 	responseHeader := map[string]string{"Content-Type": contentType}
 	return http.StatusOK, responseHeader, htmlContent, nil
+}
+
+func (r *resourceRequestProcessor) DoHead(req *http.Request) (int, map[string]string, os.Error) {
+	status, responseHeader, _, err := r.DoGet(req)
+	return status, responseHeader, err
 }
 
 func (r *resourceRequestProcessor) getRequestBody(req *http.Request) (requestBody []byte, tooLarge bool, err os.Error) {
