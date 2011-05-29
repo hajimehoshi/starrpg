@@ -163,7 +163,7 @@ func (r *resourceRequestProcessor) DoPost(req *http.Request) (int, map[string]st
 		return http.StatusInternalServerError, nil, nil, err
 	}
 	if tooLarge {
-		return http.StatusRequestEntityTooLarge, nil, nil, err		
+		return http.StatusRequestEntityTooLarge, nil, nil, nil
 	}
 	obj := map[string]string{}
 	if err := json.Unmarshal(requestBody, &obj); err != nil {
