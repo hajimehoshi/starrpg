@@ -30,6 +30,7 @@ type ResourceStorage interface {
 	Get(urlPath string) (map[string]string, os.Error)
 	GetChildren(urlPath string) (map[string]map[string]string, os.Error)
 	Set(urlPath string, obj map[string]string) os.Error
+	//Delete(urlPath string) (bool, os.Error)
 	Create(urlPath string) (uint64, os.Error)
 }
 
@@ -105,34 +106,6 @@ func handleHome(conn http.ResponseWriter, req *http.Request) {
 	if _, err := conn.Write(data); err != nil {
 		log.Print("io.WriteString: ", err)
 	}
-}
-
-const (
-	httpMethodNone = iota
-	httpMethodOptions
-	httpMethodGet
-	httpMethodHead
-	httpMethodPost
-	httpMethodPut
-	httpMethodDelete
-)
-
-func getHTTPMethod(method string) int {
-	switch method {
-	case "OPTIONS":
-		return httpMethodOptions
-	case "GET":
-		return httpMethodGet
-	case "HEAD":
-		return httpMethodHead
-	case "POST":
-		return httpMethodPost
-	case "PUT":
-		return httpMethodPut
-	case "DELETE":
-		return httpMethodDelete
-	}
-	return httpMethodNone
 }
 
 func isPostablePath(path string) bool {
@@ -221,18 +194,18 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 	var content []byte
 	var err os.Error
 	// TODO: regarding for _method parameter
-	switch getHTTPMethod(req.Method) {
-	case httpMethodOptions:
+	switch req.Method {
+	case "OPTIONS":
 		status, header, err = requestProcessor.DoOptions(req)
-	case httpMethodHead:
+	case "HEAD":
 		status, header, err = requestProcessor.DoHead(req)
-	case httpMethodGet:
+	case "GET":
 		status, header, content, err = requestProcessor.DoGet(req)
-	case httpMethodPost:
+	case "POST":
 		status, header, content, err = requestProcessor.DoPost(req)
-	case httpMethodPut:
+	case "PUT":
 		status, header, content, err = requestProcessor.DoPut(req)
-	case httpMethodDelete:
+	case "DELETE":
 		status, header, content, err = requestProcessor.DoDelete(req)
 	default:
 		status = http.StatusMethodNotAllowed
