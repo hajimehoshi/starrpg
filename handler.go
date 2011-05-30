@@ -61,6 +61,7 @@ func checkAcceptHeader(mediaType, accept string) float64 {
 }
 
 func handleHome(conn http.ResponseWriter, req *http.Request) {
+	// TODO: check method
 	if checkAcceptHeader("application/xhtml+xml", req.Header.Get("Accept")) <= 0 {
 		conn.WriteHeader(http.StatusUnsupportedMediaType)
 		return
@@ -82,44 +83,6 @@ func handleHome(conn http.ResponseWriter, req *http.Request) {
 	if _, err := conn.Write(data); err != nil {
 		log.Print("io.WriteString: ", err)
 	}
-}
-
-func isPostablePath(path string) bool {
-	var pathRegExp = regexp.MustCompile(`^/games$`)
-	if pathRegExp.MatchString(path) {
-		return true
-	}
-	return false
-}
-
-func isPuttablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+)?)?$`)
-	if pathRegExp.MatchString(path) {
-		return true
-	}
-	return false
-}
-
-func isDeletablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+$`)
-	if pathRegExp.MatchString(path) {
-		return true
-	}
-	return false
-}
-
-func getAllowHeader(path string) string {
-	allow := "OPTIONS, GET, HEAD"
-	if isPostablePath(path) {
-		allow += ", POST"
-	}
-	if isPuttablePath(path) {
-		allow += ", PUT"
-	}
-	if isDeletablePath(path) {
-		allow += ", DELETE"
-	}
-	return allow
 }
 
 func getHTMLViewPath(path string) string {
@@ -192,12 +155,9 @@ func (r *ResourceHandler) Handle(conn http.ResponseWriter, req *http.Request) {
 	for key, value := range header {
 		conn.Header().Set(key, value)
 	}
-	switch status {
-	case http.StatusNotFound:
+	if status == http.StatusNotFound {
 		r.sendResponseNotFound(conn, req)
 		return
-	case http.StatusMethodNotAllowed:
-		conn.Header().Set("Allow", getAllowHeader(req.URL.Path))
 	}
 	conn.WriteHeader(status)
 	if content == nil {

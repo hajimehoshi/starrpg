@@ -26,13 +26,51 @@ func NewResourceRequestProcessor(resourceStorage ResourceStorage) RequestProcess
 	return &resourceRequestProcessor{resourceStorage}
 }
 
+func (r *resourceRequestProcessor) isPostablePath(path string) bool {
+	var pathRegExp = regexp.MustCompile(`^/games$`)
+	if pathRegExp.MatchString(path) {
+		return true
+	}
+	return false
+}
+
+func (r *resourceRequestProcessor) isPuttablePath(path string) bool {
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+)?)?$`)
+	if pathRegExp.MatchString(path) {
+		return true
+	}
+	return false
+}
+
+func (r *resourceRequestProcessor) isDeletablePath(path string) bool {
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+$`)
+	if pathRegExp.MatchString(path) {
+		return true
+	}
+	return false
+}
+
+func (r *resourceRequestProcessor) getAllowHeader(path string) string {
+	allow := "OPTIONS, GET, HEAD"
+	if r.isPostablePath(path) {
+		allow += ", POST"
+	}
+	if r.isPuttablePath(path) {
+		allow += ", PUT"
+	}
+	if r.isDeletablePath(path) {
+		allow += ", DELETE"
+	}
+	return allow
+}
+
 func (r *resourceRequestProcessor) DoOptions(req *http.Request) (int, map[string]string, os.Error) {
 	responseHeader := map[string]string{"Content-Length": "0"}
 	path := req.URL.Path
 	if path == "*" {
 		responseHeader["Allow"] = "OPTIONS, GET, HEAD, POST, PUT, DELETE"
 	} else {
-		responseHeader["Allow"] = getAllowHeader(path)
+		responseHeader["Allow"] = r.getAllowHeader(path)
 	}
 	return http.StatusOK, responseHeader, nil
 }
@@ -159,8 +197,9 @@ func (r *resourceRequestProcessor) getScheme() string {
 
 func (r *resourceRequestProcessor) DoPost(req *http.Request) (int, map[string]string, []byte, os.Error) {
 	path := req.URL.Path
-	if !isPostablePath(path) {
-		return http.StatusMethodNotAllowed, nil, nil, nil
+	if !r.isPostablePath(path) {
+		responseHeader := map[string]string{"Allow":r.getAllowHeader(req.URL.Path)}
+		return http.StatusMethodNotAllowed, responseHeader, nil, nil
 	}
 	if !regexp.MustCompile("^application/json;?").MatchString(req.Header.Get("Content-Type")) {
 		return http.StatusUnsupportedMediaType, nil, nil, nil
@@ -204,8 +243,9 @@ func (r *resourceRequestProcessor) DoPost(req *http.Request) (int, map[string]st
 
 func (r *resourceRequestProcessor) DoPut(req *http.Request) (int, map[string]string, []byte, os.Error) {
 	path := req.URL.Path
-	if !isPuttablePath(path) {
-		return http.StatusMethodNotAllowed, nil, nil, nil
+	if !r.isPuttablePath(path) {
+		responseHeader := map[string]string{"Allow":r.getAllowHeader(req.URL.Path)}
+		return http.StatusMethodNotAllowed, responseHeader, nil, nil
 	}
 	if !regexp.MustCompile("^application/json;?").MatchString(req.Header.Get("Content-Type")) {
 		return http.StatusUnsupportedMediaType, nil, nil, nil
@@ -247,8 +287,9 @@ func (r *resourceRequestProcessor) DoPut(req *http.Request) (int, map[string]str
 
 func (r *resourceRequestProcessor) DoDelete(req *http.Request) (int, map[string]string, []byte, os.Error) {
 	path := req.URL.Path
-	if !isDeletablePath(path) {
-		return http.StatusMethodNotAllowed, nil, nil, nil
+	if !r.isDeletablePath(path) {
+		responseHeader := map[string]string{"Allow":r.getAllowHeader(req.URL.Path)}
+		return http.StatusMethodNotAllowed, responseHeader, nil, nil
 	}
 	// TODO: 子リソースの再帰的削除
 	return http.StatusNoContent, nil, nil, nil

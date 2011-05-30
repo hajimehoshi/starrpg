@@ -14,15 +14,15 @@ type Storage interface {
 	Update(key string, f func([]byte) ([]byte, os.Error)) os.Error
 }
 
-type mapStorageImpl struct {
+type mapStorage struct {
 	storage Storage
 }
 
 func NewMapStorage(storage Storage) MapStorage {
-	return &mapStorageImpl{storage:storage}
+	return &mapStorage{storage:storage}
 }
 
-func (s *mapStorageImpl) Get(key string) (map[string]string, os.Error) {
+func (s *mapStorage) Get(key string) (map[string]string, os.Error) {
 	bytes := s.storage.Get(key)
 	if bytes == nil {
 		return nil, nil
@@ -34,7 +34,7 @@ func (s *mapStorageImpl) Get(key string) (map[string]string, os.Error) {
 	return obj, nil
 }
 
-func (s *mapStorageImpl) GetWithPrefix(prefix string) (map[string]map[string]string, os.Error) {
+func (s *mapStorage) GetWithPrefix(prefix string) (map[string]map[string]string, os.Error) {
 	entries := s.storage.GetWithPrefix(prefix)
 	objs := map[string]map[string]string{}
 	for key, bytes := range entries {
@@ -47,7 +47,7 @@ func (s *mapStorageImpl) GetWithPrefix(prefix string) (map[string]map[string]str
 	return objs, nil
 }
 
-func (s *mapStorageImpl) Set(key string, obj map[string]string) os.Error {
+func (s *mapStorage) Set(key string, obj map[string]string) os.Error {
 	bytes, err := json.Marshal(obj)
 	if err != nil {
 		return err
@@ -56,11 +56,11 @@ func (s *mapStorageImpl) Set(key string, obj map[string]string) os.Error {
 	return nil
 }
 
-func (s *mapStorageImpl) Delete(key string) bool {
+func (s *mapStorage) Delete(key string) bool {
 	return s.storage.Delete(key)
 }
 
-func (s *mapStorageImpl) Update(key string, f func(obj map[string]string) (os.Error)) os.Error {
+func (s *mapStorage) Update(key string, f func(obj map[string]string) (os.Error)) os.Error {
 	err := s.storage.Update(key, func (bytes []byte) ([]byte, os.Error) {
 		obj := map[string]string{}
 		if 0 < len(bytes) {
@@ -80,7 +80,7 @@ func (s *mapStorageImpl) Update(key string, f func(obj map[string]string) (os.Er
 	return err
 }
 
-func (s *mapStorageImpl) Inc(key, subKey string) (uint64, os.Error) {
+func (s *mapStorage) Inc(key, subKey string) (uint64, os.Error) {
 	num := uint64(0)
 	err := s.Update(key, func (obj map[string]string) os.Error {
 		numStr, ok := obj[subKey]

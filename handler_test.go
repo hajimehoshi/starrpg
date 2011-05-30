@@ -1,7 +1,6 @@
 package starrpg
 
 import (
-	//"strconv"
 	"testing"
 )
 
@@ -58,99 +57,6 @@ func TestCheckAcceptHeader(t *testing.T) {
 			t.Errorf("checkAcceptHeader(%#v, %#v) is not %#v but %#v",
 				testCase.mediaType,
 				testCase.accept,
-				testCase.expected,
-				actual)
-		}
-	}
-}
-
-func TestIsPostablePath(t *testing.T) {
-	type TestCase struct {
-		path string
-		expected bool
-	}
-	testCases := []TestCase{
-		{"/games", true},
-		{"/games/1", false},
-		{"/games/1/maps", false},
-		{"/games/1/maps/2", false},
-		{"/games/", false},
-		{"/games/1/", false},
-		{"/games/1/maps/", false},
-		{"/games/1/maps/2/", false},
-		{"/foos/", false},
-		{"/foos/1", false},
-		{"/games/1/foos", false},
-		{"/games/1/foos/2", false},
-		{"", false},
-		{"games", false},
-	}
-	for _, testCase := range testCases {
-		if actual := isPostablePath(testCase.path); actual != testCase.expected {
-			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
-			testCase.path,
-			testCase.expected,
-			actual)
-		}
-	}
-}
-
-func TestIsPuttablePath(t *testing.T) {
-	type TestCase struct {
-		path string
-		expected bool
-	}
-	testCases := []TestCase{
-		{"/games", false},
-		{"/games/1", true},
-		{"/games/1/maps", false},
-		{"/games/1/maps/2", true},
-		{"/games/", false},
-		{"/games/1/", false},
-		{"/games/1/maps/", false},
-		{"/games/1/maps/2/", false},
-		{"/foos/", false},
-		{"/foos/1", false},
-		{"/games/1/foos", false},
-		{"/games/1/foos/2", true},
-		{"", false},
-		{"games", false},
-	}
-	for _, testCase := range testCases {
-		if actual := isPuttablePath(testCase.path); actual != testCase.expected {
-			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
-			testCase.path,
-			testCase.expected,
-			actual)
-		}
-	}
-}
-
-func TestIsDeletablePath(t *testing.T) {
-	type TestCase struct {
-		path string
-		expected bool
-	}
-	testCases := []TestCase{
-		{"/games", false},
-		{"/games/1", true},
-		{"/games/1/maps", false},
-		{"/games/1/maps/2", false},
-		{"/games/", false},
-		{"/games/1/", false},
-		{"/games/1/maps/", false},
-		{"/games/1/maps/2/", false},
-		{"/foos/", false},
-		{"/foos/1", false},
-		{"/games/1/foos", false},
-		{"/games/1/foos/2", false},
-		{"", false},
-		{"games", false},
-	}
-	for _, testCase := range testCases {
-		if actual := isDeletablePath(testCase.path); actual != testCase.expected {
-			t.Errorf("isGettablePath(%#v) is not %#v but %#v",
-				testCase.path,
 				testCase.expected,
 				actual)
 		}
