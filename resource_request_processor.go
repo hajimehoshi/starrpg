@@ -35,7 +35,7 @@ func (r *resourceRequestProcessor) isPostablePath(path string) bool {
 }
 
 func (r *resourceRequestProcessor) isPuttablePath(path string) bool {
-	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+(/([a-zA-Z0-9_\-]+)/[a-zA-Z0-9_\-]+)?)?$`)
+	pathRegExp := regexp.MustCompile(`^/games/[a-zA-Z0-9_\-]+(/[a-zA-Z0-9_\-]+/[a-zA-Z0-9_\-]+)*$`)
 	if pathRegExp.MatchString(path) {
 		return true
 	}
@@ -75,85 +75,88 @@ func (r *resourceRequestProcessor) DoOptions(req *http.Request) (int, map[string
 	return http.StatusOK, responseHeader, nil
 }
 
-func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]string, []byte, os.Error) {
-	acceptHeader := req.Header.Get("Accept")
+func (r *resourceRequestProcessor) returnsFile(req *http.Request) (int, map[string]string, []byte, os.Error) {
 	path := req.URL.Path
 	fileContent, err := GetFileFromCache(filepath.Join("public", path))
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	if fileContent != nil {
-		// TODO: check acceptHeader?
-		var contentType string
-		switch {
-		case strings.HasSuffix(path, ".js"):
-			contentType = "text/javascript; charset=utf-8"
-		case strings.HasSuffix(path, ".css"):
-			contentType = "text/css; charset=utf-8"
-		case path == "/favicon.ico":
-			contentType = "image/png" // TODO: modify?
-		default:
-			contentType = "application/octet-stream"
-		}
-		status := http.StatusOK
-		if checkAcceptHeader(contentType, acceptHeader) == 0 {
-			status  = http.StatusNotAcceptable
-		}
-		return status, map[string]string{"Content-Type":contentType}, fileContent, nil
+	if fileContent == nil {
+		return http.StatusNotFound, nil, nil, nil
 	}
+	var contentType string
+	switch {
+	case strings.HasSuffix(path, ".js"):
+		contentType = "text/javascript; charset=utf-8"
+	case strings.HasSuffix(path, ".css"):
+		contentType = "text/css; charset=utf-8"
+	case path == "/favicon.ico":
+		contentType = "image/png" // TODO: modify?
+	default:
+		contentType = "application/octet-stream"
+	}
+	status := http.StatusOK
+	if checkAcceptHeader(contentType, req.Header.Get("Accept")) == 0 {
+		status  = http.StatusNotAcceptable
+	}
+	return status, map[string]string{"Content-Type":contentType}, fileContent, nil
+}
+
+func (r *resourceRequestProcessor) returnsResource(req *http.Request) (int, map[string]string, []byte, os.Error) {
+	path := req.URL.Path
 	resourceObj, err := r.ResourceStorage.Get(path)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
-	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
-	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
-	if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
+	if len(path) == 0 {
+		return http.StatusBadRequest, nil, nil, nil
+	}
+	// remove the last slash
+	if 1 < len(path) && path[len(path) - 1] == '/' {
+		path = path[:len(path) - 1]
+	}
+	if path == "/" {
 		return http.StatusNotAcceptable, nil, nil, nil
 	}
-	if xhtmlQVal <= jsonQVal && htmlQVal <= jsonQVal {
-		if len(path) == 0 {
-			return http.StatusBadRequest, nil, nil, nil
+	slashCount := strings.Count(path, "/")
+	if slashCount == 0 {
+		return http.StatusBadRequest, nil, nil, nil
+	}
+	if slashCount == 1 {
+		return http.StatusNotAcceptable, nil, nil, nil
+	}
+	var obj interface{}
+	switch slashCount % 2 {
+	case 0:
+		if resourceObj == nil {
+			return http.StatusNotFound, nil, nil, err
 		}
-		// remove the last slash
-		if 1 < len(path) && path[len(path) - 1] == '/' {
-			path = path[:len(path) - 1]
-		}
-		if path == "/" {
-			return http.StatusNotAcceptable, nil, nil, nil
-		}
-		slashCount := strings.Count(path, "/")
-		if slashCount == 0 {
-			return http.StatusBadRequest, nil, nil, nil
-		}
-		if slashCount == 1 {
-			return http.StatusNotAcceptable, nil, nil, nil
-		}
-		var obj interface{}
-		switch slashCount % 2 {
-		case 0:
-			if resourceObj == nil {
-				return http.StatusNotFound, nil, nil, err
-			}
-			obj = resourceObj
-		case 1:
-			// resourceObj may be nil
-			obj2, err := r.ResourceStorage.GetChildren(path)
-			if err != nil {
-				return http.StatusInternalServerError, nil, nil, err
-			}
-			obj = obj2
-		}
-		if obj == nil {
-			return http.StatusNotFound, nil, nil, nil
-		}
-		content, err := json.Marshal(obj)
+		obj = resourceObj
+	case 1:
+		// resourceObj may be nil
+		obj2, err := r.ResourceStorage.GetChildren(path)
 		if err != nil {
 			return http.StatusInternalServerError, nil, nil, err
 		}
-		contentType := "application/json; charset=utf-8"
-		responseHeader := map[string]string{"Content-Type": contentType}
-		return http.StatusOK, responseHeader, content, nil
+		obj = obj2
+	}
+	if obj == nil {
+		return http.StatusNotFound, nil, nil, nil
+	}
+	content, err := json.Marshal(obj)
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, err
+	}
+	contentType := "application/json; charset=utf-8"
+	responseHeader := map[string]string{"Content-Type": contentType}
+	return http.StatusOK, responseHeader, content, nil
+}
+
+func (r *resourceRequestProcessor) returnsHTMLFile(req *http.Request) (int, map[string]string, []byte, os.Error) {
+	path := req.URL.Path
+	resourceObj, err := r.ResourceStorage.Get(path)
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, err
 	}
 	if resourceObj == nil {
 		return http.StatusNotFound, nil, nil, err
@@ -172,6 +175,23 @@ func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]str
 	contentType := "application/xhtml+xml; charset=utf-8";
 	responseHeader := map[string]string{"Content-Type": contentType}
 	return http.StatusOK, responseHeader, htmlContent, nil
+}
+
+func (r *resourceRequestProcessor) DoGet(req *http.Request) (int, map[string]string, []byte, os.Error) {
+	if status, header, content, err := r.returnsFile(req); status != http.StatusNotFound || err != nil {
+		return status, header, content, err
+	}
+	acceptHeader := req.Header.Get("Accept")
+	jsonQVal := checkAcceptHeader("application/json", acceptHeader)
+	xhtmlQVal := checkAcceptHeader("application/xhtml+xml", acceptHeader)
+	htmlQVal := checkAcceptHeader("text/html", acceptHeader)
+	if jsonQVal == 0 && xhtmlQVal == 0 && htmlQVal == 0 {
+		return http.StatusNotAcceptable, nil, nil, nil
+	}
+	if xhtmlQVal <= xhtmlQVal && htmlQVal <= jsonQVal {
+		return r.returnsResource(req)
+	}
+	return r.returnsHTMLFile(req)
 }
 
 func (r *resourceRequestProcessor) DoHead(req *http.Request) (int, map[string]string, os.Error) {
@@ -230,14 +250,13 @@ func (r *resourceRequestProcessor) DoPost(req *http.Request) (int, map[string]st
 	if err := r.ResourceStorage.Set(newPath, obj); err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	// TODO: content
-	responseHeader := map[string]string{
-		"Content-Type": "application/xhtml+xml; charset=utf-8",
-		"Location": r.getScheme() + "://" + req.Host + newPath}
 	responseContent, err := json.Marshal(obj)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
+	responseHeader := map[string]string{
+		"Content-Type": "application/xhtml+xml; charset=utf-8",
+		"Location": r.getScheme() + "://" + req.Host + newPath}
 	return http.StatusCreated, responseHeader, responseContent, nil
 }
 
