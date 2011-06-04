@@ -26,10 +26,10 @@ function createModel(server, path) {
     var updated = createEvent();
     var isLoaded = false;
     server.get(path, function (jqXHR, data) {
-                   cache = data;
-                   updated.fire(cache);
-                   isLoaded = true;
-               });
+        cache = data;
+        updated.fire(cache);
+        isLoaded = true;
+    });
     return {
         get: function(key) {
             return cache[key];
@@ -52,77 +52,101 @@ function createModel(server, path) {
 
 function createView(jqDom) {
     var updated = createEvent();
-    jqDom.change(function () {
-                     updated.fire(jqDom.val());
-                 });
-    return {
-        get: function () {
-            return jqDom.val();
-        },
-        update: function (value) {
-            if (jqDom.val() === value) {
-                return;
-            }
-            jqDom.val(value);
+    if (jqDom && (jqDom.change instanceof Function)) {
+        jqDom.change(function () {
             updated.fire(jqDom.val());
+        });
+    }
+    return {
+        update: function (value) {
+            if (jqDom && (jqDom.val instanceof Function)) {
+                if (jqDom.val() === value) {
+                    return;
+                }
+                jqDom.val(value);
+            }
+            updated.fire(value);
         },
         register: updated.register,
     }
 }
 
+function packZeroes(num, length) {
+    var zeroes = '';
+    for (var i = 0; i < length; i++) {
+        zeroes += '0';
+    }
+    return (zeroes + num).substr(-length)
+}
+
 function init($) {
     (function () {
-         var mainPanels = $('.mainPanel');
-         function switchMainPanel() {
-             mainPanels.hide();
-             var m = this.id.match(/^(.+?)NavItem$/);
-             $('#' + m[1]).show();
-             return false;
-         }
-         $('.mainPanelNavItem').click(switchMainPanel);
-         $('.mainPanelNavItem.default').click();
-     })();
-    var activeEditPanel = null;
+        var mainPanels = $('.mainPanel');
+        function switchMainPanel() {
+            mainPanels.hide();
+            var m = this.id.match(/^(.+?)NavItem$/);
+            $('#' + m[1]).show();
+            return false;
+        }
+        $('.mainPanelNavItem').click(switchMainPanel);
+        $('.mainPanelNavItem.default').click();
+    })();
     (function () {
-         var editPanels = $('.editPanel');
-         function switchEditPanel() {
-             // calll check function?
-             editPanels.hide();
-             var m = this.id.match(/^(.+?)NavItem$/);
-             $('#' + m[1]).show();
-             activeEditPanel = m[1];
-             return false;
-         }
-         $('.editPanelNavItem').click(switchEditPanel);
-         $('.editPanelNavItem.default').click();
-     })();
+        var editPanels = $('.editPanel');
+        function switchEditPanel() {
+            // calll check function?
+            editPanels.hide();
+            var m = this.id.match(/^(.+?)NavItem$/);
+            $('#' + m[1]).show();
+            $(window).resize();
+            return false;
+        }
+        $('.editPanelNavItem').click(switchEditPanel);
+        $('.editPanelNavItem.default').click();
+    })();
     (function () {
-         var server = createServer($);
-         var game = createModel(server, location.pathname);
-         var items = createModel(server, location.pathname + '/items');
-         (function () {
-              var nameView = createView($('#editGame *[name=name]'));
-              var descriptionView = createView($('#editGame *[name=description]'));
-              nameView.register(function (name) {
-                                    game.update('name', name);
-                                });
-              descriptionView.register(function (description) {
-                                           game.update('description', description);
-                                       });
-              game.register(function (game) {
-                                nameView.update(game.name);
-                                descriptionView.update(game.description);
-                            });
-          })();
-         (function () {
-              var entriesView = createView($('#editItems nav'));
-          })();
-         var editItemsPresenter = {
-             
-         };
-     })();
+        var path = location.pathname;
+        var server = createServer($);
+        var game = createModel(server, path);
+        var items = createModel(server, path + '/items');
+        (function () {
+            var titleView = createView($('#editGame *[name=title]'));
+            var descriptionView = createView($('#editGame *[name=description]'));
+            titleView.register(function (title) {
+                game.update('title', title);
+            });
+            descriptionView.register(function (description) {
+                game.update('description', description);
+            });
+            game.register(function (game) {
+                titleView.update(game.title);
+                descriptionView.update(game.description);
+            });
+        })();
+        $(window).resize(function () {
+            $('section.hasEntries nav select').each(function (i, dom) {
+                var jqDom = $(dom);
+                jqDom.height(jqDom.parent().innerHeight());
+            });
+        });
+        (function () {
+            var entriesSelect = $('#editItems nav select');
+            $(window).resize(function () {
+                entriesSelect.height(entriesSelect.parent().innerHeight());
+            });
+            for (var i = 1; i <= 500; i++) {
+                var option = $('<option></option>').text(packZeroes(i, 3) + ': ').attr('value', i);
+                entriesSelect.append(option);
+            }
+            var entriesView = createView();
+            entriesView.register(function (value) {
+            });
+            items.register(function (items) {
+                entriesView.update(items);
+            });
+        })();
+    })();
     // TODO: 色々と待つ処理
-    
     $('#loading').hide();
 }
 jQuery(init);

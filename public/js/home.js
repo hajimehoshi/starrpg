@@ -1,18 +1,15 @@
 function init($) {
     function createGame(e) {
         var server = createServer($);
-        var data = {
-            name: 'New Game',
-        }
-        var callback = function (jqXHR, data) {
+        server.post('/games', {
+            title: 'New Game',
+        }, function (jqXHR, data) {
             var newGameURL = jqXHR.getResponseHeader("Location");
-            var callback = function () {
-                location.replace(newGameURL);                
-            }
-            server.put(newGameURL + '/items/1', {}, callback);
+            server.put(newGameURL + '/items/1', {}, function () {
+                location.replace(newGameURL);
+            });
             server.flush();
-        }
-        server.post('/games', data, callback);
+        });
         server.flush();
         return false;
     }
