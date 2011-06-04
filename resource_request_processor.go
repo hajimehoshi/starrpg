@@ -67,11 +67,13 @@ func (r *resourceRequestProcessor) getAllowHeader(path string) string {
 func (r *resourceRequestProcessor) DoOptions(req *http.Request) (int, map[string]string, os.Error) {
 	responseHeader := map[string]string{"Content-Length": "0"}
 	path := req.URL.Path
+	var allowHeader string
 	if path == "*" {
-		responseHeader["Allow"] = "OPTIONS, GET, HEAD, POST, PUT, DELETE"
+		allowHeader = "OPTIONS, GET, HEAD, POST, PUT, DELETE"
 	} else {
-		responseHeader["Allow"] = r.getAllowHeader(path)
+		allowHeader = r.getAllowHeader(path)
 	}
+	responseHeader["Allow"] = allowHeader
 	return http.StatusOK, responseHeader, nil
 }
 
@@ -97,7 +99,7 @@ func (r *resourceRequestProcessor) returnsFile(req *http.Request) (int, map[stri
 	}
 	status := http.StatusOK
 	if checkAcceptHeader(contentType, req.Header.Get("Accept")) == 0 {
-		status  = http.StatusNotAcceptable
+		status = http.StatusNotAcceptable
 	}
 	return status, map[string]string{"Content-Type":contentType}, fileContent, nil
 }
