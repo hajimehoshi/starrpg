@@ -30,9 +30,6 @@ jQuery(function ($) {
             isLoaded = true;
         });
         return {
-            get: function(key) {
-                return cache[key];
-            },
             update: function (key, value) {
                 if (cache[key] === value) {
                     return;
@@ -43,6 +40,39 @@ jQuery(function ($) {
                 updated.fire(cache);
             },
             regUpdated: updated.register,
+            isLoaded: function () {
+                return isLoaded;
+            },
+        };
+    }
+    function createCollectionModel(server, path) {
+        var cache = {};
+        var updated = createEvent();
+        var entryUpdated = createEvent();
+        var isLoaded = false;
+        server.get(path, function (jqXHR, data) {
+            cache = data;
+            updated.fire(cache);
+            isLoaded = true;
+        });
+        return {
+            getEntry: function (id) {
+                return cache[id];
+            },
+            regUpdated: updated.register,
+            updateEntry: function (id, key, value) {
+                if (cache[id] && cache[id][key] === value) {
+                    return;
+                }
+                //cache = clone(cache);
+                if (!cache[id]) {
+                    cache[id] = {};
+                } 
+                cache[id][key] = value;
+                server.put(path + '/' + id, cache[id]);
+                entryUpdated.fire(id, cache[id]);
+            },
+            regEntryUpdated: entryUpdated.register,
             isLoaded: function () {
                 return isLoaded;
             },
@@ -62,6 +92,14 @@ jQuery(function ($) {
                 updated.fire(value);
             },
             regUpdated: updated.register,
+            enable: function () {
+                jqDom.removeAttr('disabled');
+                return this;
+            },
+            disable: function () {
+                jqDom.attr('disabled', 'disabled');
+                return this;
+            },
         };
     }
     function packZeroes(num, length) {
@@ -72,30 +110,37 @@ jQuery(function ($) {
         return (zeroes + num).substr(-length)
     }
     function createEntriesView(jqDom) {
+        function getEntryName(id, value) {
+            if (value && value.name) {
+                return packZeroes(id, 3) + ': ' + value.name;
+            } else {
+                return packZeroes(id, 3) + ': ';
+            }
+        }
         var select = jqDom;
         for (var i = 1; i <= 500; i++) {
-            var option = $('<option></option>').text(packZeroes(i, 3) + ': ').attr('value', i);
+            var option = $('<option></option>').text(getEntryName(i, null)).attr('value', i);
             select.append(option);
         }
+        i = undefined;
         var options = select.children('option')
         var selected = createEvent();
         select.change(function () {
             selected.fire($(this).children('option:selected').val());
         });
         return {
-            update: function (value) {
-                $.each(value, function (i, val) {
-                    if (!val.name) {
+            update: function (values) {
+                $.each(values, function (id, value) {
+                    if (!value.name) {
                         return;
                     }
-                    var option = options.filter('[value="' + i + '"]');
-                    if (!option) {
-                        // error?
-                        return;
-                    }
-                    var text = packZeroes(i, 3) + ': ' + val.name
-                    option.text(text);
+                    var option = options.filter('[value="' + id + '"]');
+                    option.text(getEntryName(id, value));
                 });
+            },
+            updateEntry: function (id, value) {
+                var option = options.filter('[value="' + id + '"]');
+                option.text(getEntryName(id, value));
             },
             regSelected: selected.register,
         };
@@ -126,10 +171,10 @@ jQuery(function ($) {
         var path = location.pathname;
         var server = createServer($);
         var game = createModel(server, path);
-        var items = createModel(server, path + '/items');
+        var items = createCollectionModel(server, path + '/items');
         (function () {
-            var titleView = createView($('#editGame *[name=title]'));
-            var descriptionView = createView($('#editGame *[name=description]'));
+            var titleView = createView($('#editGame *[name="title"]'));
+            var descriptionView = createView($('#editGame *[name="description"]'));
             titleView.regUpdated(function (title) {
                 game.update('title', title);
             });
@@ -144,12 +189,21 @@ jQuery(function ($) {
         (function () {
             var selectedIndex = -1;
             var entriesView = createEntriesView($('#editItems nav select'));
+            var nameView = createView($('#editItems *[name="name"]')).disable();
             entriesView.regSelected(function (i) {
                 selectedIndex = i;
-                console.log(selectedIndex);
+                var item = items.getEntry(i);
+                nameView.enable();
+                nameView.update((item && item.name) ? item.name : '');
+            });
+            nameView.regUpdated(function (name) {
+                items.updateEntry(selectedIndex, 'name', name);
             });
             items.regUpdated(function (items) {
                 entriesView.update(items);
+            });
+            items.regEntryUpdated(function (id, item) {
+                entriesView.updateEntry(id, item);
             });
         })();
     })();
