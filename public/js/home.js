@@ -1,5 +1,5 @@
-function init($) {
-    function createGame(e) {
+jQuery(function ($) {
+    $("#createGame").click(function () {
         var server = createServer($);
         server.post('/games', {
             title: 'New Game',
@@ -12,7 +12,6 @@ function init($) {
         });
         server.flush();
         return false;
-    }
-    $("#createGame").click(createGame);
-}
-jQuery(init);
+    });
+});
+
