@@ -10,9 +10,7 @@ jQuery(function ($) {
             fire: function () {
                 for (var i = 0; i < registeredFuncs.length; i++) {
                     var func = registeredFuncs[i];
-                    if (func instanceof Function) {
-                        func.apply(null, arguments);
-                    }
+                    func.apply(null, arguments);
                 }
             },
             register: function () {
@@ -23,11 +21,9 @@ jQuery(function ($) {
     function createModel(server, path) {
         var cache = {};
         var updated = createEvent();
-        var isLoaded = false;
         server.get(path, function (jqXHR, data) {
             cache = data;
             updated.fire(cache);
-            isLoaded = true;
         });
         return {
             update: function (key, value) {
@@ -40,20 +36,15 @@ jQuery(function ($) {
                 updated.fire(cache);
             },
             regUpdated: updated.register,
-            isLoaded: function () {
-                return isLoaded;
-            },
         };
     }
     function createCollectionModel(server, path) {
         var cache = {};
         var updated = createEvent();
         var entryUpdated = createEvent();
-        var isLoaded = false;
         server.get(path, function (jqXHR, data) {
             cache = data;
             updated.fire(cache);
-            isLoaded = true;
         });
         return {
             getEntry: function (id) {
@@ -73,9 +64,6 @@ jQuery(function ($) {
                 entryUpdated.fire(id, cache[id]);
             },
             regEntryUpdated: entryUpdated.register,
-            isLoaded: function () {
-                return isLoaded;
-            },
         };
     }
     function createView(jqDom) {
@@ -102,24 +90,24 @@ jQuery(function ($) {
             },
         };
     }
-    function packZeroes(num, length) {
-        var zeroes = '';
-        for (var i = 0; i < length; i++) {
-            zeroes += '0';
-        }
-        return (zeroes + num).substr(-length)
-    }
     function createEntriesView(jqDom) {
-        function getEntryName(id, value) {
-            if (value && value.name) {
-                return packZeroes(id, 3) + ': ' + value.name;
-            } else {
-                return packZeroes(id, 3) + ': ';
+        function getEntryText(id, value) {
+            function packZeroes(num, length) {
+                var zeroes = '';
+                for (var i = 0; i < length; i++) {
+                    zeroes += '0';
+                }
+                return (zeroes + num).substr(-length)
             }
+            var text = packZeroes(id, 3) + ': ';
+            if (value && value.name) {
+                text += value.name;
+            }
+            return text;
         }
         var select = jqDom;
         for (var i = 1; i <= 500; i++) {
-            var option = $('<option></option>').text(getEntryName(i, null)).attr('value', i);
+            var option = $('<option></option>').text(getEntryText(i, null)).attr('value', i);
             select.append(option);
         }
         i = undefined;
@@ -135,12 +123,12 @@ jQuery(function ($) {
                         return;
                     }
                     var option = options.filter('[value="' + id + '"]');
-                    option.text(getEntryName(id, value));
+                    option.text(getEntryText(id, value));
                 });
             },
             updateEntry: function (id, value) {
                 var option = options.filter('[value="' + id + '"]');
-                option.text(getEntryName(id, value));
+                option.text(getEntryText(id, value));
             },
             regSelected: selected.register,
         };
@@ -187,14 +175,16 @@ jQuery(function ($) {
             });
         })();
         (function () {
+            var entriesView = createEntriesView($('#editMaps nav select'));
+        })();
+        (function () {
             var selectedIndex = -1;
             var entriesView = createEntriesView($('#editItems nav select'));
             var nameView = createView($('#editItems *[name="name"]')).disable();
             entriesView.regSelected(function (i) {
                 selectedIndex = i;
                 var item = items.getEntry(i);
-                nameView.enable();
-                nameView.update((item && item.name) ? item.name : '');
+                nameView.enable().update((item && item.name) ? item.name : '');
             });
             nameView.regUpdated(function (name) {
                 items.updateEntry(selectedIndex, 'name', name);
@@ -205,6 +195,15 @@ jQuery(function ($) {
             items.regEntryUpdated(function (id, item) {
                 entriesView.updateEntry(id, item);
             });
+        })();
+        (function () {
+            var entriesView = createEntriesView($('#editActors nav select'));
+        })();
+        (function () {
+            var entriesView = createEntriesView($('#editSkills nav select'));
+        })();
+        (function () {
+            var entriesView = createEntriesView($('#editEnemies nav select'));
         })();
     })();
     $(window).resize(function () {
